@@ -1,14 +1,6 @@
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Collections.Generic;
 
 namespace AIToady.Harvester
 {
@@ -21,6 +13,9 @@ namespace AIToady.Harvester
         private TextBox activeTextBox = null;
         private List<string> threadLinks = new List<string>();
         private bool isNextElementAvailable = false;
+        private System.Windows.Threading.DispatcherTimer harvestTimer;
+        private int currentLinkIndex = 0;
+        private bool isHarvesting = false;
 
         public MainWindow()
         {
@@ -40,6 +35,10 @@ namespace AIToady.Harvester
                     }
                 };
             };
+            
+            harvestTimer = new System.Windows.Threading.DispatcherTimer();
+            harvestTimer.Interval = TimeSpan.FromMinutes(1);
+            harvestTimer.Tick += HarvestTimer_Tick;
         }
 
         private async void WebView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
@@ -70,7 +69,14 @@ namespace AIToady.Harvester
                     if (window.capturingElement) {
                         event.preventDefault();
                         event.stopPropagation();
-                        let result = window.captureMode === 'class' ? (event.target.parentElement?.className || '') : getSelector(event.target.parentElement);
+                        let result;
+                        if (window.captureMode === 'class') {
+                            result = event.target.parentElement?.className || '';
+                        } else {
+                            // For Next Element, get the most specific class from the clicked element
+                            let classes = event.target.className.split(' ');
+                            result = classes.find(c => c.includes('next') || c.includes('Next')) || classes[classes.length - 1] || '';
+                        }
                         window.chrome.webview.postMessage(result);
                         window.capturingElement = false;
                     }
@@ -105,7 +111,7 @@ namespace AIToady.Harvester
         {
             isCapturingElement = true;
             activeTextBox = NextElementTextBox;
-            WebView.ExecuteScriptAsync("window.capturingElement = true;");
+            WebView.ExecuteScriptAsync("window.capturingElement = true; window.captureMode = 'nextClass';");
         }
 
         private void NextElementTextBox_LostFocus(object sender, RoutedEventArgs e)
@@ -119,7 +125,7 @@ namespace AIToady.Harvester
         {
             isCapturingElement = true;
             activeTextBox = ThreadElementTextBox;
-            WebView.ExecuteScriptAsync("window.capturingElement = true;");
+            WebView.ExecuteScriptAsync("window.capturingElement = true; window.captureMode = 'class';");
         }
 
         private void ThreadElementTextBox_LostFocus(object sender, RoutedEventArgs e)
@@ -144,7 +150,15 @@ namespace AIToady.Harvester
 
         private async void NextButton_Click(object sender, RoutedEventArgs e)
         {
-            await WebView.ExecuteScriptAsync("document.querySelector('.pageNav-jump--next')?.click();");
+            string className = NextElementTextBox.Text.Trim();
+            if (!string.IsNullOrEmpty(className))
+            {
+                if (!className.StartsWith("."))
+                {
+                    className = "." + className;
+                }
+                await WebView.ExecuteScriptAsync($"document.querySelector('{className}')?.click();");
+            }
         }
 
         private async void LoadThreadsButton_Click(object sender, RoutedEventArgs e)
@@ -176,6 +190,68 @@ namespace AIToady.Harvester
             catch (System.Exception ex)
             {
                 MessageBox.Show($"Error loading threads: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void StartHarvestingButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!isHarvesting)
+            {
+                // Validate inputs
+                if (string.IsNullOrWhiteSpace(NextElementTextBox.Text))
+                {
+                    MessageBox.Show("Next Element is required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(ThreadElementTextBox.Text))
+                {
+                    MessageBox.Show("Thread Element is required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (!int.TryParse(PageLoadDelayTextBox.Text, out int delaySeconds) || delaySeconds <= 0)
+                {
+                    MessageBox.Show("Page Load Delay must be a positive number.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                if (threadLinks.Count == 0)
+                {
+                    MessageBox.Show("No thread links loaded. Click 'Load Threads' first.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
+                isHarvesting = true;
+                currentLinkIndex = 0;
+                StartHarvestingButton.Content = "Stop Harvesting";
+                harvestTimer.Interval = TimeSpan.FromSeconds(delaySeconds);
+                harvestTimer.Start();
+                LoadNextLink(); // Load first link immediately
+            }
+            else
+            {
+                isHarvesting = false;
+                StartHarvestingButton.Content = "Start Harvesting";
+                harvestTimer.Stop();
+            }
+        }
+
+        private void HarvestTimer_Tick(object sender, EventArgs e)
+        {
+            LoadNextLink();
+        }
+
+        private void LoadNextLink()
+        {
+            if (currentLinkIndex < threadLinks.Count)
+            {
+                WebView.Source = new Uri(threadLinks[currentLinkIndex]);
+                currentLinkIndex++;
+            }
+            else
+            {
+                // Finished harvesting all links
+                isHarvesting = false;
+                StartHarvestingButton.Content = "Start Harvesting";
+                harvestTimer.Stop();
             }
         }
 
