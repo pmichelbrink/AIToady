@@ -144,77 +144,19 @@ namespace AIToady.Harvester.ViewModels
             _currentThreadIndex = 0;
 
             if (!int.TryParse(PageLoadDelay, out int delay))
-            {
                 delay = 60;
-            }
 
             var allThreads = new List<ForumThread>();
 
-
             _currentThreadIndex++;
 
-            // Loop through each thread
             while (_isHarvesting && _currentThreadIndex < _threadLinks.Count)
             {
-                NavigateRequested?.Invoke(_threadLinks[_currentThreadIndex]);
-                await System.Threading.Tasks.Task.Delay(delay * 1000);
-                
-                var currentThread = new ForumThread();
-                
-                // Get thread name from page title
-                string titleScript = "document.title";
-                string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
-                currentThread.ThreadName = System.Text.Json.JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
-                
-                // Loop through all pages in the thread
-                bool hasNextPage = true;
-                while (_isHarvesting && hasNextPage)
+                var thread = await HarvestThread(_threadLinks[_currentThreadIndex], delay);
+                if (thread != null)
                 {
-                    // Extract messages from current page
-                    string extractScript = @"
-                        let messages = [];
-                        document.querySelectorAll('.message-inner').forEach(messageDiv => {
-                            let userElement = messageDiv.querySelector('.message-name a');
-                            let messageBodyElement = messageDiv.querySelector('.message-body .bbWrapper');
-                            let timeElement = messageDiv.querySelector('.u-dt');
-                            
-                            if (userElement && messageBodyElement) {
-                                messages.push({
-                                    username: userElement.textContent.trim(),
-                                    message: messageBodyElement.textContent.trim(),
-                                    timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
-                                    url: window.location.href
-                                });
-                            }
-                        });
-                        JSON.stringify(messages);
-                    ";
-                    
-                    string result = await ExecuteScriptRequested?.Invoke(extractScript);
-                    if (!string.IsNullOrEmpty(result))
-                    {
-                        result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
-                        var pageMessages = System.Text.Json.JsonSerializer.Deserialize<ForumMessage[]>(result);
-                        currentThread.Messages.AddRange(pageMessages);
-                    }
-                    
-                    // Check if NextElement exists and click it
-                    string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                    string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                    nextResult = System.Text.Json.JsonSerializer.Deserialize<string>(nextResult);
-                    
-                    if (nextResult == "found")
-                    {
-                        await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-                        await System.Threading.Tasks.Task.Delay(delay * 1000);
-                    }
-                    else
-                    {
-                        hasNextPage = false;
-                    }
+                    allThreads.Add(thread);
                 }
-                
-                allThreads.Add(currentThread);
                 _currentThreadIndex++;
             }
 
@@ -226,6 +168,75 @@ namespace AIToady.Harvester.ViewModels
             int totalMessages = allThreads.Sum(t => t.Messages.Count);
             MessageBox.Show($"Harvesting complete. {allThreads.Count} threads with {totalMessages} messages saved to {fileName}", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             _isHarvesting = false;
+        }
+
+        private async Task<ForumThread> HarvestThread(string threadUrl, int delay)
+        {
+            NavigateRequested?.Invoke(threadUrl);
+            await System.Threading.Tasks.Task.Delay(delay * 1000);
+            
+            var thread = new ForumThread();
+            
+            // Get thread name from page title
+            string titleScript = "document.title";
+            string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
+            thread.ThreadName = System.Text.Json.JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+            
+            // Loop through all pages in the thread
+            bool hasNextPage = true;
+            while (_isHarvesting && hasNextPage)
+            {
+                var pageMessages = await HarvestPage();
+                thread.Messages.AddRange(pageMessages);
+                
+                // Check if NextElement exists and click it
+                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
+                string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                nextResult = System.Text.Json.JsonSerializer.Deserialize<string>(nextResult);
+                
+                if (nextResult == "found")
+                {
+                    await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                }
+                else
+                {
+                    hasNextPage = false;
+                }
+            }
+            
+            return thread;
+        }
+
+        private async Task<List<ForumMessage>> HarvestPage()
+        {
+            string extractScript = @"
+                let messages = [];
+                document.querySelectorAll('.message-inner').forEach(messageDiv => {
+                    let userElement = messageDiv.querySelector('.message-name a');
+                    let messageBodyElement = messageDiv.querySelector('.message-body .bbWrapper');
+                    let timeElement = messageDiv.querySelector('.u-dt');
+                    
+                    if (userElement && messageBodyElement) {
+                        messages.push({
+                            username: userElement.textContent.trim(),
+                            message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
+                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
+                            url: window.location.href
+                        });
+                    }
+                });
+                JSON.stringify(messages);
+            ";
+            
+            string result = await ExecuteScriptRequested?.Invoke(extractScript);
+            if (!string.IsNullOrEmpty(result))
+            {
+                result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
+                return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+            }
+            
+            return new List<ForumMessage>();
         }
 
         public void HandleElementCapture(string result, bool isThreadElement)
