@@ -155,6 +155,9 @@ namespace AIToady.Harvester.ViewModels
                 // Process all threads on current page
                 for (int i = 0; i < _threadLinks.Count && _isHarvesting; i++)
                 {
+                    ++i;
+                    ++i;
+                    ++i;
                     string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                     var thread = await HarvestThread(_threadLinks[i], delay, timestamp);
                     if (thread != null)
@@ -221,7 +224,6 @@ namespace AIToady.Harvester.ViewModels
             string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
             string threadFolder = $"{safeThreadName}_{timestamp}";
             string imagesFolder = System.IO.Path.Combine(threadFolder, "Images");
-            int imageCounter = 1;
             
             // Loop through all pages in the thread
             bool hasNextPage = true;
@@ -233,30 +235,33 @@ namespace AIToady.Harvester.ViewModels
                 foreach (var message in pageMessages)
                 {
                     var imageNames = new List<string>();
-                    foreach (var imageData in message.Images)
+                    for (int i = 0; i < message.Images.Count; i++)
                     {
                         try
                         {
-                            if (imageData.StartsWith("data:image/"))
+                            string imageUrl = message.Images[i];
+                            if (imageUrl.StartsWith("http"))
                             {
-                                string base64Data = imageData.Substring(imageData.IndexOf(",") + 1);
-                                var imageBytes = Convert.FromBase64String(base64Data);
-                                
-                                string imageName = $"{imageCounter:D8}.jpg";
+                                string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
+                                if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
+                                    fileName = $"image_{i + 1}.jpg";
                                 
                                 if (!System.IO.Directory.Exists(imagesFolder))
                                     System.IO.Directory.CreateDirectory(imagesFolder);
                                 
-                                string imagePath = System.IO.Path.Combine(imagesFolder, imageName);
-                                await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+                                using (var httpClient = new System.Net.Http.HttpClient())
+                                {
+                                    var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
+                                    string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                                    await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+                                }
                                 
-                                imageNames.Add(imageName);
-                                imageCounter++;
+                                imageNames.Add(fileName);
                             }
                         }
                         catch { }
                     }
-                    message.Images = imageNames;;
+                    message.Images = imageNames;
                 }
                 
                 thread.Messages.AddRange(pageMessages);
@@ -286,25 +291,15 @@ namespace AIToady.Harvester.ViewModels
                 let messages = [];
                 document.querySelectorAll('.message-inner').forEach(messageDiv => {
                     let userElement = messageDiv.querySelector('.message-name a');
-                    let messageBodyElement = messageDiv.querySelector('.message-body .bbWrapper');
+                    let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt');
                     let images = [];
                     
                     if (messageBodyElement) {
-                        messageBodyElement.querySelectorAll('img').forEach(img => {
-                            try {
-                                let canvas = document.createElement('canvas');
-                                let ctx = canvas.getContext('2d');
-                                canvas.width = img.naturalWidth || img.width;
-                                canvas.height = img.naturalHeight || img.height;
-                                ctx.drawImage(img, 0, 0);
-                                let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                                images.push(dataUrl);
-                            } catch {
-                                let imageUrl = img.src;
-                                if (imageUrl && !imageUrl.startsWith('data:')) {
-                                    images.push(imageUrl);
-                                }
+                        messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
+                            let imageUrl = img.getAttribute('data-url') || img.src;
+                            if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
+                                images.push(imageUrl);
                             }
                         });
                     }
