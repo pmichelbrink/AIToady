@@ -12,8 +12,5 @@ namespace AIToady.Harvester.Models
         
         [JsonPropertyName("timestamp")]
         public string Timestamp { get; set; } = string.Empty;
-        
-        [JsonPropertyName("url")]
-        public string Url { get; set; } = string.Empty;
     }
 }

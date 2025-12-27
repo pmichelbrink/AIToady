@@ -141,32 +141,64 @@ namespace AIToady.Harvester.ViewModels
             }
 
             _isHarvesting = true;
-            _currentThreadIndex = 0;
 
             if (!int.TryParse(PageLoadDelay, out int delay))
                 delay = 60;
 
-            var allThreads = new List<ForumThread>();
+            int totalThreads = 0;
+            int totalMessages = 0;
 
-            _currentThreadIndex++;
-
-            while (_isHarvesting && _currentThreadIndex < _threadLinks.Count)
+            // Outer loop for forum pages
+            bool hasNextForumPage = true;
+            while (_isHarvesting && hasNextForumPage)
             {
-                var thread = await HarvestThread(_threadLinks[_currentThreadIndex], delay);
-                if (thread != null)
+                // Process all threads on current page
+                for (int i = 0; i < _threadLinks.Count && _isHarvesting; i++)
                 {
-                    allThreads.Add(thread);
+                    var thread = await HarvestThread(_threadLinks[i], delay);
+                    if (thread != null)
+                    {
+                        string json = System.Text.Json.JsonSerializer.Serialize(thread, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                        string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+                        string fileName = $"{safeThreadName}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                        await System.IO.File.WriteAllTextAsync(fileName, json);
+                        totalThreads++;
+                        totalMessages += thread.Messages.Count;
+                    }
                 }
-                _currentThreadIndex++;
+
+                NavigateRequested?.Invoke(Url);
+                
+                // Wait for navigation to complete by checking URL
+                string currentUrl;
+                do
+                {
+                    await System.Threading.Tasks.Task.Delay(500);
+                    currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
+                    currentUrl = System.Text.Json.JsonSerializer.Deserialize<string>(currentUrl);
+                } while (currentUrl != Url && _isHarvesting);
+
+                // Check if Next element exists and click it
+                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
+                string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                nextResult = System.Text.Json.JsonSerializer.Deserialize<string>(nextResult);
+
+                if (nextResult == "found")
+                {
+                    await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                    Url = await ExecuteScriptRequested?.Invoke("window.location.href");
+                    Url = System.Text.Json.JsonSerializer.Deserialize<string>(Url);
+                    ExecuteLoadThreads();
+                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                }
+                else
+                {
+                    hasNextForumPage = false;
+                }
             }
 
-            // Save to JSON file
-            string json = System.Text.Json.JsonSerializer.Serialize(allThreads, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            string fileName = $"harvested_threads_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-            await System.IO.File.WriteAllTextAsync(fileName, json);
-            
-            int totalMessages = allThreads.Sum(t => t.Messages.Count);
-            MessageBox.Show($"Harvesting complete. {allThreads.Count} threads with {totalMessages} messages saved to {fileName}", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Harvesting complete. {totalThreads} threads with {totalMessages} messages saved as individual files", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             _isHarvesting = false;
         }
 
@@ -221,8 +253,7 @@ namespace AIToady.Harvester.ViewModels
                         messages.push({
                             username: userElement.textContent.trim(),
                             message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
-                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
-                            url: window.location.href
+                            timestamp: timeElement ? timeElement.getAttribute('datetime') : ''
                         });
                     }
                 });

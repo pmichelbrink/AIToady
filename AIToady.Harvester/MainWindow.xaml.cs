@@ -34,6 +34,9 @@ namespace AIToady.Harvester
 
         private async void WebView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
         {
+            if (!_viewModel.IsHarvesting)
+                _viewModel.Url = WebView.Source?.ToString() ?? string.Empty;
+            
             await WebView.ExecuteScriptAsync(@"
                 function getSelector(element) {
                     if (element.id) {
