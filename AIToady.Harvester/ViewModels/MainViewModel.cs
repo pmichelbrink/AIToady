@@ -155,12 +155,16 @@ namespace AIToady.Harvester.ViewModels
                 // Process all threads on current page
                 for (int i = 0; i < _threadLinks.Count && _isHarvesting; i++)
                 {
-                    var thread = await HarvestThread(_threadLinks[i], delay);
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    var thread = await HarvestThread(_threadLinks[i], delay, timestamp);
                     if (thread != null)
                     {
-                        string json = System.Text.Json.JsonSerializer.Serialize(thread, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
                         string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
-                        string fileName = $"{safeThreadName}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                        string threadFolder = $"{safeThreadName}_{timestamp}";
+                        System.IO.Directory.CreateDirectory(threadFolder);
+                        
+                        string json = System.Text.Json.JsonSerializer.Serialize(thread, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                        string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
                         await System.IO.File.WriteAllTextAsync(fileName, json);
                         totalThreads++;
                         totalMessages += thread.Messages.Count;
@@ -202,7 +206,7 @@ namespace AIToady.Harvester.ViewModels
             _isHarvesting = false;
         }
 
-        private async Task<ForumThread> HarvestThread(string threadUrl, int delay)
+        private async Task<ForumThread> HarvestThread(string threadUrl, int delay, string timestamp)
         {
             NavigateRequested?.Invoke(threadUrl);
             await System.Threading.Tasks.Task.Delay(delay * 1000);
@@ -214,11 +218,47 @@ namespace AIToady.Harvester.ViewModels
             string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
             thread.ThreadName = System.Text.Json.JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
             
+            string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            string threadFolder = $"{safeThreadName}_{timestamp}";
+            string imagesFolder = System.IO.Path.Combine(threadFolder, "Images");
+            int imageCounter = 1;
+            
             // Loop through all pages in the thread
             bool hasNextPage = true;
             while (_isHarvesting && hasNextPage)
             {
                 var pageMessages = await HarvestPage();
+                
+                // Download images for each message
+                foreach (var message in pageMessages)
+                {
+                    var imageNames = new List<string>();
+                    foreach (var imageData in message.Images)
+                    {
+                        try
+                        {
+                            if (imageData.StartsWith("data:image/"))
+                            {
+                                string base64Data = imageData.Substring(imageData.IndexOf(",") + 1);
+                                var imageBytes = Convert.FromBase64String(base64Data);
+                                
+                                string imageName = $"{imageCounter:D8}.jpg";
+                                
+                                if (!System.IO.Directory.Exists(imagesFolder))
+                                    System.IO.Directory.CreateDirectory(imagesFolder);
+                                
+                                string imagePath = System.IO.Path.Combine(imagesFolder, imageName);
+                                await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
+                                
+                                imageNames.Add(imageName);
+                                imageCounter++;
+                            }
+                        }
+                        catch { }
+                    }
+                    message.Images = imageNames;;
+                }
+                
                 thread.Messages.AddRange(pageMessages);
                 
                 // Check if NextElement exists and click it
@@ -248,12 +288,43 @@ namespace AIToady.Harvester.ViewModels
                     let userElement = messageDiv.querySelector('.message-name a');
                     let messageBodyElement = messageDiv.querySelector('.message-body .bbWrapper');
                     let timeElement = messageDiv.querySelector('.u-dt');
+                    let images = [];
+                    
+                    if (messageBodyElement) {
+                        messageBodyElement.querySelectorAll('img').forEach(img => {
+                            try {
+                                let canvas = document.createElement('canvas');
+                                let ctx = canvas.getContext('2d');
+                                canvas.width = img.naturalWidth || img.width;
+                                canvas.height = img.naturalHeight || img.height;
+                                ctx.drawImage(img, 0, 0);
+                                let dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                                images.push(dataUrl);
+                            } catch {
+                                let imageUrl = img.src;
+                                if (imageUrl && !imageUrl.startsWith('data:')) {
+                                    images.push(imageUrl);
+                                }
+                            }
+                        });
+                    }
                     
                     if (userElement && messageBodyElement) {
+                        let postId = '';
+                        let currentElement = messageDiv;
+                        while (currentElement && !postId) {
+                            postId = currentElement.getAttribute('data-lb-id') || currentElement.getAttribute('id') || '';
+                            currentElement = currentElement.parentElement;
+                        }
+                        if (postId.startsWith('js-')) {
+                            postId = postId.substring(3);
+                        }
                         messages.push({
+                            postId: postId,
                             username: userElement.textContent.trim(),
                             message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
-                            timestamp: timeElement ? timeElement.getAttribute('datetime') : ''
+                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
+                            images: images
                         });
                     }
                 });
@@ -263,8 +334,15 @@ namespace AIToady.Harvester.ViewModels
             string result = await ExecuteScriptRequested?.Invoke(extractScript);
             if (!string.IsNullOrEmpty(result))
             {
-                result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
-                return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                try
+                {
+                    result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
+                    return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                }
+                catch
+                {
+                    return new List<ForumMessage>();
+                }
             }
             
             return new List<ForumMessage>();
