@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using AIToady.Harvester.Models;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.Web.WebView2.Wpf;
-using AIToady.Harvester.Models;
 
 namespace AIToady.Harvester.ViewModels
 {
@@ -13,12 +10,20 @@ namespace AIToady.Harvester.ViewModels
         private string _url = "akfiles.com";
         private string _nextElement = ".pageNav-jump--next";
         private string _threadElement = "";
-        private string _pageLoadDelay = "6";
+        private int _pageLoadDelay = 6;
         private bool _isHarvesting = false;
         private int _currentThreadIndex = 0;
         private bool _isCapturingElement = false;
         private List<string> _threadLinks = new List<string>();
-
+        int _threadImageCounter = 1;
+        string _forumName;
+        private string _threadName;
+        string _siteName = "The AK Files";
+        private Random _random = new Random();
+        private int GetRandomizedDelay()
+        {
+            return _random.Next(PageLoadDelay, PageLoadDelay * 3 + 1) * 1000;
+        }
         public string Url
         {
             get => _url;
@@ -37,7 +42,7 @@ namespace AIToady.Harvester.ViewModels
             set => SetProperty(ref _threadElement, value);
         }
 
-        public string PageLoadDelay
+        public int PageLoadDelay
         {
             get => _pageLoadDelay;
             set => SetProperty(ref _pageLoadDelay, value);
@@ -63,8 +68,8 @@ namespace AIToady.Harvester.ViewModels
         public ICommand StartHarvestingCommand { get; }
 
         public event Action<string> NavigateRequested;
-        public event Func<string, System.Threading.Tasks.Task<string>> ExecuteScriptRequested;
-        public event Func<string, string, System.Threading.Tasks.Task> ExtractImageRequested;
+        public event Func<string, Task<string>> ExecuteScriptRequested;
+        public event Func<string, string, Task> ExtractImageRequested;
 
         public MainViewModel()
         {
@@ -115,8 +120,8 @@ namespace AIToady.Harvester.ViewModels
                     ";
                     
                     string result = await ExecuteScriptRequested?.Invoke(script);
-                    result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
-                    var links = System.Text.Json.JsonSerializer.Deserialize<string[]>(result);
+                    result = JsonSerializer.Deserialize<string>(result);
+                    var links = JsonSerializer.Deserialize<string[]>(result);
                     _threadLinks.Clear();
                     _threadLinks.AddRange(links);
                 }
@@ -143,8 +148,11 @@ namespace AIToady.Harvester.ViewModels
 
             _isHarvesting = true;
 
-            if (!int.TryParse(PageLoadDelay, out int delay))
-                delay = 60;
+            // Get forum name from h1.p-title-value element
+            string forumScript = "document.querySelector('h1.p-title-value')?.textContent?.trim() || 'Unknown Forum'";
+            string forumResult = await ExecuteScriptRequested?.Invoke(forumScript);
+            _forumName = JsonSerializer.Deserialize<string>(forumResult) ?? "Unknown Forum";
+            _forumName = string.Join("_", _forumName.Split(System.IO.Path.GetInvalidFileNameChars()));
 
             int totalThreads = 0;
             int totalMessages = 0;
@@ -162,14 +170,13 @@ namespace AIToady.Harvester.ViewModels
                     //++i;
                     //++i;
                     string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    var thread = await HarvestThread(_threadLinks[i], delay, timestamp);
+                    var thread = await HarvestThread(_threadLinks[i], timestamp);
                     if (thread != null)
-                    {
-                        string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
-                        string threadFolder = $"{safeThreadName}_{timestamp}";
+                    {                 
+                        string threadFolder = System.IO.Path.Combine(_siteName, _forumName, _threadName);
                         System.IO.Directory.CreateDirectory(threadFolder);
                         
-                        string json = System.Text.Json.JsonSerializer.Serialize(thread, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                        string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
                         string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
                         await System.IO.File.WriteAllTextAsync(fileName, json);
                         totalThreads++;
@@ -183,24 +190,24 @@ namespace AIToady.Harvester.ViewModels
                 string currentUrl;
                 do
                 {
-                    await System.Threading.Tasks.Task.Delay(500);
+                    await Task.Delay(500);
                     currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
-                    currentUrl = System.Text.Json.JsonSerializer.Deserialize<string>(currentUrl);
+                    currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
                 } while (currentUrl != Url && _isHarvesting);
 
                 // Check if Next element exists and click it
                 string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                 string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                nextResult = System.Text.Json.JsonSerializer.Deserialize<string>(nextResult);
+                nextResult = JsonSerializer.Deserialize<string>(nextResult);
 
                 if (nextResult == "found")
                 {
                     await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                    await Task.Delay(GetRandomizedDelay());
                     Url = await ExecuteScriptRequested?.Invoke("window.location.href");
-                    Url = System.Text.Json.JsonSerializer.Deserialize<string>(Url);
+                    Url = JsonSerializer.Deserialize<string>(Url);
                     ExecuteLoadThreads();
-                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                    await Task.Delay(GetRandomizedDelay());
                 }
                 else
                 {
@@ -212,21 +219,28 @@ namespace AIToady.Harvester.ViewModels
             _isHarvesting = false;
         }
 
-        private async Task<ForumThread> HarvestThread(string threadUrl, int delay, string timestamp)
+        private async Task<ForumThread> HarvestThread(string threadUrl, string timestamp)
         {
+            _threadImageCounter = 1;
             NavigateRequested?.Invoke(threadUrl);
-            await System.Threading.Tasks.Task.Delay(delay * 1000);
+            await Task.Delay(GetRandomizedDelay());
             
             var thread = new ForumThread();
-            int globalImageCounter = 1;
             
             // Get thread name from page title
             string titleScript = "document.title";
             string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
-            thread.ThreadName = System.Text.Json.JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+            thread.ThreadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
             
-            string safeThreadName = string.Join("_", thread.ThreadName.Split(System.IO.Path.GetInvalidFileNameChars()));
-            string threadFolder = $"{safeThreadName}_{timestamp}";
+            // Extract site name from thread title (assuming format like "ThreadName | The AK Files")
+            if (thread.ThreadName.Contains(" | "))
+            {
+                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}_{timestamp}";
+                _siteName = thread.ThreadName.Split(" | ").Last().Trim();
+            }
+
+            _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            string threadFolder = System.IO.Path.Combine(_siteName, _forumName, _threadName);
             string imagesFolder = System.IO.Path.Combine(threadFolder, "Images");
             
             // Loop through all pages in the thread
@@ -234,52 +248,57 @@ namespace AIToady.Harvester.ViewModels
             while (_isHarvesting && hasNextPage)
             {
                 var pageMessages = await HarvestPage();
-                
+
                 // Extract images for each message
-                foreach (var message in pageMessages)
-                {
-                    var imageNames = new List<string>();
-                    for (int i = 0; i < message.Images.Count; i++)
-                    {
-                        try
-                        {
-                            string imageUrl = message.Images[i];
-                            string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
-                            if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
-                                fileName = $"image_{globalImageCounter}.jpg";
-                            
-                            if (!System.IO.Directory.Exists(imagesFolder))
-                                System.IO.Directory.CreateDirectory(imagesFolder);
-                            
-                            string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
-                            await ExtractImageRequested?.Invoke(imageUrl, imagePath);
-                            imageNames.Add(fileName);
-                            globalImageCounter++;
-                        }
-                        catch { }
-                    }
-                    message.Images = imageNames;
-                }
-                
-                thread.Messages.AddRange(pageMessages);
-                
+                await ExtractImages(thread, imagesFolder, pageMessages);
+
                 // Check if NextElement exists and click it
                 string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                 string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                nextResult = System.Text.Json.JsonSerializer.Deserialize<string>(nextResult);
-                
+                nextResult = JsonSerializer.Deserialize<string>(nextResult);
+
                 if (nextResult == "found")
                 {
                     await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-                    await System.Threading.Tasks.Task.Delay(delay * 1000);
+                    await Task.Delay(GetRandomizedDelay());
                 }
                 else
                 {
                     hasNextPage = false;
                 }
             }
-            
+
             return thread;
+        }
+
+        private async Task ExtractImages(ForumThread thread, string imagesFolder, List<ForumMessage> pageMessages)
+        {
+            foreach (var message in pageMessages)
+            {
+                var imageNames = new List<string>();
+                for (int i = 0; i < message.Images.Count; i++)
+                {
+                    try
+                    {
+                        string imageUrl = message.Images[i];
+                        string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
+                        if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
+                            fileName = $"image_{_threadImageCounter}.jpg";
+
+                        if (!System.IO.Directory.Exists(imagesFolder))
+                            System.IO.Directory.CreateDirectory(imagesFolder);
+
+                        string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                        await ExtractImageRequested?.Invoke(imageUrl, imagePath);
+                        imageNames.Add(fileName);
+                        _threadImageCounter++;
+                    }
+                    catch { }
+                }
+                message.Images = imageNames;
+            }
+
+            thread.Messages.AddRange(pageMessages);
         }
 
         private async Task<List<ForumMessage>> HarvestPage()

@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using AIToady.Harvester.ViewModels;
 
@@ -33,7 +34,7 @@ namespace AIToady.Harvester
             };
         }
 
-        private async System.Threading.Tasks.Task ExtractImageFromWebView(string imageUrl, string filePath)
+        private async Task ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try
             {
@@ -53,7 +54,7 @@ namespace AIToady.Harvester
                         // Use WebView2 navigation for captcha pages
                         string currentUrl = WebView.Source?.ToString();
                         WebView.Source = new Uri(imageUrl);
-                        await System.Threading.Tasks.Task.Delay(2000);
+                        await Task.Delay(2000);
                         
                         string script = @"
                             var img = document.querySelector('img');
@@ -156,6 +157,11 @@ namespace AIToady.Harvester
             {
                 _viewModel.GoCommand.Execute(null);
             }
+        }
+
+        private void PageLoadDelayTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !char.IsDigit(e.Text, 0) || (sender as TextBox)?.Text == "0";
         }
     }
 }

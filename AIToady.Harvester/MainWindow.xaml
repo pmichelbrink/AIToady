@@ -28,7 +28,7 @@
             <Label Content="Thread Element:" Width="100" VerticalAlignment="Center" Margin="10,0,0,0"/>
             <TextBox x:Name="ThreadElementTextBox" Width="150" Height="25" VerticalContentAlignment="Center" Text="{Binding ThreadElement}" GotFocus="ThreadElementTextBox_GotFocus" LostFocus="ThreadElementTextBox_LostFocus"/>
             <Label Content="Page Load Delay (seconds):" Width="150" VerticalAlignment="Center" Margin="10,0,0,0"/>
-            <TextBox Width="30" Height="25" VerticalContentAlignment="Center" Text="{Binding PageLoadDelay}"/>
+            <TextBox x:Name="PageLoadDelayTextBox" Width="30" Height="25" VerticalContentAlignment="Center" Text="{Binding PageLoadDelay}" PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput"/>
         </StackPanel>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="2" Margin="5"/>
