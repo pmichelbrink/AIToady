@@ -64,6 +64,7 @@ namespace AIToady.Harvester.ViewModels
 
         public event Action<string> NavigateRequested;
         public event Func<string, System.Threading.Tasks.Task<string>> ExecuteScriptRequested;
+        public event Func<string, string, System.Threading.Tasks.Task> ExtractImageRequested;
 
         public MainViewModel()
         {
@@ -156,8 +157,10 @@ namespace AIToady.Harvester.ViewModels
                 for (int i = 0; i < _threadLinks.Count && _isHarvesting; i++)
                 {
                     ++i;
-                    ++i;
-                    ++i;
+                    //++i;
+                    //++i;
+                    //++i;
+                    //++i;
                     string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                     var thread = await HarvestThread(_threadLinks[i], delay, timestamp);
                     if (thread != null)
@@ -215,6 +218,7 @@ namespace AIToady.Harvester.ViewModels
             await System.Threading.Tasks.Task.Delay(delay * 1000);
             
             var thread = new ForumThread();
+            int globalImageCounter = 1;
             
             // Get thread name from page title
             string titleScript = "document.title";
@@ -231,7 +235,7 @@ namespace AIToady.Harvester.ViewModels
             {
                 var pageMessages = await HarvestPage();
                 
-                // Download images for each message
+                // Extract images for each message
                 foreach (var message in pageMessages)
                 {
                     var imageNames = new List<string>();
@@ -240,24 +244,17 @@ namespace AIToady.Harvester.ViewModels
                         try
                         {
                             string imageUrl = message.Images[i];
-                            if (imageUrl.StartsWith("http"))
-                            {
-                                string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
-                                if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
-                                    fileName = $"image_{i + 1}.jpg";
-                                
-                                if (!System.IO.Directory.Exists(imagesFolder))
-                                    System.IO.Directory.CreateDirectory(imagesFolder);
-                                
-                                using (var httpClient = new System.Net.Http.HttpClient())
-                                {
-                                    var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
-                                    string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
-                                    await System.IO.File.WriteAllBytesAsync(imagePath, imageBytes);
-                                }
-                                
-                                imageNames.Add(fileName);
-                            }
+                            string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
+                            if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
+                                fileName = $"image_{globalImageCounter}.jpg";
+                            
+                            if (!System.IO.Directory.Exists(imagesFolder))
+                                System.IO.Directory.CreateDirectory(imagesFolder);
+                            
+                            string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                            await ExtractImageRequested?.Invoke(imageUrl, imagePath);
+                            imageNames.Add(fileName);
+                            globalImageCounter++;
                         }
                         catch { }
                     }
