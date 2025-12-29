@@ -18,6 +18,8 @@ namespace AIToady.Harvester
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
             
+            LoadWindowSettings();
+            
             _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
@@ -32,6 +34,27 @@ namespace AIToady.Harvester
                     }
                 };
             };
+            
+            Closing += MainWindow_Closing;
+        }
+
+        private void LoadWindowSettings()
+        {
+            Width = Properties.Settings.Default.WindowWidth;
+            Height = Properties.Settings.Default.WindowHeight;
+            Left = Properties.Settings.Default.WindowLeft;
+            Top = Properties.Settings.Default.WindowTop;
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Properties.Settings.Default.WindowWidth = Width;
+            Properties.Settings.Default.WindowHeight = Height;
+            Properties.Settings.Default.WindowLeft = Left;
+            Properties.Settings.Default.WindowTop = Top;
+            Properties.Settings.Default.Save();
+            
+            _viewModel.SaveSettings();
         }
 
         private async Task ExtractImageFromWebView(string imageUrl, string filePath)
@@ -162,6 +185,22 @@ namespace AIToady.Harvester
         private void PageLoadDelayTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
         {
             e.Handled = !char.IsDigit(e.Text, 0) || (sender as TextBox)?.Text == "0";
+        }
+
+        private void BrowseButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                ValidateNames = false,
+                CheckFileExists = false,
+                CheckPathExists = true,
+                FileName = "Folder Selection"
+            };
+            
+            if (dialog.ShowDialog() == true)
+            {
+                _viewModel.RootFolder = System.IO.Path.GetDirectoryName(dialog.FileName);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 using AIToady.Harvester.Models;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
@@ -20,9 +21,19 @@ namespace AIToady.Harvester.ViewModels
         private string _threadName;
         string _siteName = "The AK Files";
         private Random _random = new Random();
+        private string _rootFolder = GetDriveWithMostFreeSpace();
+        
+        private static string GetDriveWithMostFreeSpace()
+        {
+            return DriveInfo.GetDrives()
+                .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
+                .OrderByDescending(d => d.AvailableFreeSpace)
+                .FirstOrDefault()?.Name ?? "C:\\";
+        }
         private int GetRandomizedDelay()
         {
-            return _random.Next(PageLoadDelay, PageLoadDelay * 3 + 1) * 1000;
+            int delay = _random.Next(PageLoadDelay, PageLoadDelay * 3 + 1) * 1000;
+            return delay;
         }
         public string Url
         {
@@ -46,6 +57,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _pageLoadDelay;
             set => SetProperty(ref _pageLoadDelay, value);
+        }
+
+        public string RootFolder
+        {
+            get => _rootFolder;
+            set => SetProperty(ref _rootFolder, value);
         }
 
         public bool IsHarvesting
@@ -73,10 +90,30 @@ namespace AIToady.Harvester.ViewModels
 
         public MainViewModel()
         {
+            LoadSettings();
             GoCommand = new RelayCommand(ExecuteGo);
             NextCommand = new RelayCommand(ExecuteNext);
             LoadThreadsCommand = new RelayCommand(ExecuteLoadThreads);
             StartHarvestingCommand = new RelayCommand(ExecuteStartHarvesting, () => !_isHarvesting || _threadLinks.Count > 0);
+        }
+
+        private void LoadSettings()
+        {
+            Url = string.IsNullOrEmpty(Properties.Settings.Default.Url) ? "akfiles.com" : Properties.Settings.Default.Url;
+            NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
+            ThreadElement = Properties.Settings.Default.ThreadElement;
+            PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 6 : Properties.Settings.Default.PageLoadDelay;
+            RootFolder = string.IsNullOrEmpty(Properties.Settings.Default.RootFolder) ? GetDriveWithMostFreeSpace() : Properties.Settings.Default.RootFolder;
+        }
+
+        public void SaveSettings()
+        {
+            Properties.Settings.Default.Url = Url;
+            Properties.Settings.Default.NextElement = NextElement;
+            Properties.Settings.Default.ThreadElement = ThreadElement;
+            Properties.Settings.Default.PageLoadDelay = PageLoadDelay;
+            Properties.Settings.Default.RootFolder = RootFolder;
+            Properties.Settings.Default.Save();
         }
 
         private void ExecuteGo()
@@ -154,10 +191,6 @@ namespace AIToady.Harvester.ViewModels
             _forumName = JsonSerializer.Deserialize<string>(forumResult) ?? "Unknown Forum";
             _forumName = string.Join("_", _forumName.Split(System.IO.Path.GetInvalidFileNameChars()));
 
-            int totalThreads = 0;
-            int totalMessages = 0;
-
-            // Outer loop for forum pages
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
@@ -169,45 +202,32 @@ namespace AIToady.Harvester.ViewModels
                     //++i;
                     //++i;
                     //++i;
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    var thread = await HarvestThread(_threadLinks[i], timestamp);
-                    if (thread != null)
-                    {                 
-                        string threadFolder = System.IO.Path.Combine(_siteName, _forumName, _threadName);
-                        System.IO.Directory.CreateDirectory(threadFolder);
-                        
-                        string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
-                        string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
-                        await System.IO.File.WriteAllTextAsync(fileName, json);
-                        totalThreads++;
-                        totalMessages += thread.Messages.Count;
-                    }
+                    var thread = await HarvestThread(_threadLinks[i]);
+                    await WriteThreadInfo(thread);
                 }
 
                 NavigateRequested?.Invoke(Url);
-                
-                // Wait for navigation to complete by checking URL
-                string currentUrl;
-                do
-                {
-                    await Task.Delay(500);
-                    currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
-                    currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-                } while (currentUrl != Url && _isHarvesting);
 
-                // Check if Next element exists and click it
+                await LoadForumPage();
+
+                // Check if Next element exists and click it, if it 
+                // doesn't exist, we are on the last page
                 string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                 string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
                 nextResult = JsonSerializer.Deserialize<string>(nextResult);
 
                 if (nextResult == "found")
                 {
+                    //Load the next page by clicking the Next element
                     await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+
+                    //Wait for navigation to complete
                     await Task.Delay(GetRandomizedDelay());
+
                     Url = await ExecuteScriptRequested?.Invoke("window.location.href");
                     Url = JsonSerializer.Deserialize<string>(Url);
+
                     ExecuteLoadThreads();
-                    await Task.Delay(GetRandomizedDelay());
                 }
                 else
                 {
@@ -215,11 +235,37 @@ namespace AIToady.Harvester.ViewModels
                 }
             }
 
-            MessageBox.Show($"Harvesting complete. {totalThreads} threads with {totalMessages} messages saved as individual files", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             _isHarvesting = false;
         }
 
-        private async Task<ForumThread> HarvestThread(string threadUrl, string timestamp)
+        private async Task WriteThreadInfo(ForumThread thread)
+        {
+            if (thread != null)
+            {
+                string threadFolder = System.IO.Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
+                System.IO.Directory.CreateDirectory(threadFolder);
+
+                string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
+                string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
+                await System.IO.File.WriteAllTextAsync(fileName, json);
+            }
+        }
+
+        private async Task LoadForumPage()
+        {
+            //Load the forum page (a thread page is currently loaded) and
+            //wait for navigation to complete by checking URL
+            string currentUrl;
+            do
+            {
+                await Task.Delay(500);
+                currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
+                currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+            } while (currentUrl != Url && _isHarvesting);
+        }
+
+        private async Task<ForumThread> HarvestThread(string threadUrl)
         {
             _threadImageCounter = 1;
             NavigateRequested?.Invoke(threadUrl);
@@ -235,13 +281,13 @@ namespace AIToady.Harvester.ViewModels
             // Extract site name from thread title (assuming format like "ThreadName | The AK Files")
             if (thread.ThreadName.Contains(" | "))
             {
-                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}_{timestamp}";
+                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}_{DateTime.Now.ToString("yyyyMMdd_HHmmss")}";
                 _siteName = thread.ThreadName.Split(" | ").Last().Trim();
             }
 
             _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
-            string threadFolder = System.IO.Path.Combine(_siteName, _forumName, _threadName);
-            string imagesFolder = System.IO.Path.Combine(threadFolder, "Images");
+            string threadFolder = Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
+            string imagesFolder = Path.Combine(threadFolder, "Images");
             
             // Loop through all pages in the thread
             bool hasNextPage = true;
