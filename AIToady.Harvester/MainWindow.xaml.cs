@@ -1,8 +1,10 @@
+using AIToady.Harvester.ViewModels;
 using System;
+using System.Security.Policy;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using AIToady.Harvester.ViewModels;
 
 namespace AIToady.Harvester
 {
@@ -55,6 +57,7 @@ namespace AIToady.Harvester
             Properties.Settings.Default.Save();
             
             _viewModel.SaveSettings();
+            _viewModel.Dispose();
         }
 
         private async Task ExtractImageFromWebView(string imageUrl, string filePath)
@@ -94,7 +97,11 @@ namespace AIToady.Harvester
                         string result = await WebView.ExecuteScriptAsync(script);
                         if (!string.IsNullOrEmpty(currentUrl))
                             WebView.Source = new Uri(currentUrl);
-                        
+
+                        do
+                            await Task.Delay(500);
+                        while (currentUrl != WebView.Source?.ToString());
+
                         if (!string.IsNullOrEmpty(result) && result != "null")
                         {
                             result = result.Trim('"');
@@ -111,8 +118,10 @@ namespace AIToady.Harvester
 
         private async void WebView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
         {
-            if (!_viewModel.IsHarvesting)
-                _viewModel.Url = WebView.Source?.ToString() ?? string.Empty;
+            if (_viewModel.IsHarvesting)
+                return;
+
+            _viewModel.Url = WebView.Source?.ToString() ?? string.Empty;
             
             await WebView.ExecuteScriptAsync(@"
                 function getSelector(element) {
@@ -187,6 +196,11 @@ namespace AIToady.Harvester
             e.Handled = !char.IsDigit(e.Text, 0) || (sender as TextBox)?.Text == "0";
         }
 
+        private void ThreadsToSkipTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !char.IsDigit(e.Text, 0);
+        }
+
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
@@ -201,6 +215,56 @@ namespace AIToady.Harvester
             {
                 _viewModel.RootFolder = System.IO.Path.GetDirectoryName(dialog.FileName);
             }
+        }
+
+        private void StartTimePickerButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowTimePicker(StartTimeTextBox, _viewModel.StartTime, time => _viewModel.StartTime = time);
+        }
+
+        private void EndTimePickerButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowTimePicker(EndTimeTextBox, _viewModel.EndTime, time => _viewModel.EndTime = time);
+        }
+
+        private void ShowTimePicker(TextBox textBox, string currentTime, Action<string> updateTime)
+        {
+            var popup = new System.Windows.Controls.Primitives.Popup
+            {
+                PlacementTarget = textBox,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+                StaysOpen = false
+            };
+
+            var stackPanel = new StackPanel { Background = System.Windows.Media.Brushes.White, Margin = new Thickness(5) };
+            var border = new Border { BorderBrush = System.Windows.Media.Brushes.Gray, BorderThickness = new Thickness(1), Child = stackPanel };
+
+            var hourCombo = new ComboBox { Width = 50, Margin = new Thickness(2) };
+            var minuteCombo = new ComboBox { Width = 50, Margin = new Thickness(2) };
+
+            for (int i = 0; i < 24; i++) hourCombo.Items.Add(i.ToString("D2"));
+            for (int i = 0; i < 60; i += 15) minuteCombo.Items.Add(i.ToString("D2"));
+
+            if (TimeSpan.TryParse(currentTime, out var time))
+            {
+                hourCombo.SelectedItem = time.Hours.ToString("D2");
+                minuteCombo.SelectedItem = (time.Minutes / 15 * 15).ToString("D2");
+            }
+
+            var okButton = new Button { Content = "OK", Width = 50, Margin = new Thickness(2) };
+            okButton.Click += (s, e) => {
+                updateTime($"{hourCombo.SelectedItem}:{minuteCombo.SelectedItem}");
+                popup.IsOpen = false;
+            };
+
+            stackPanel.Children.Add(new Label { Content = "Hour:" });
+            stackPanel.Children.Add(hourCombo);
+            stackPanel.Children.Add(new Label { Content = "Minute:" });
+            stackPanel.Children.Add(minuteCombo);
+            stackPanel.Children.Add(okButton);
+
+            popup.Child = border;
+            popup.IsOpen = true;
         }
     }
 }

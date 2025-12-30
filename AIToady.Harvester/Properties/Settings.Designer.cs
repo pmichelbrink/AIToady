@@ -50,6 +50,18 @@ namespace AIToady.Harvester.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ThreadsToSkip {
+            get {
+                return ((int)(this["ThreadsToSkip"]));
+            }
+            set {
+                this["ThreadsToSkip"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("6")]
         public int PageLoadDelay {
             get {
@@ -117,6 +129,30 @@ namespace AIToady.Harvester.Properties {
             }
             set {
                 this["WindowTop"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("09:00")]
+        public string StartTime {
+            get {
+                return ((string)(this["StartTime"]));
+            }
+            set {
+                this["StartTime"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("17:00")]
+        public string EndTime {
+            get {
+                return ((string)(this["EndTime"]));
+            }
+            set {
+                this["EndTime"] = value;
             }
         }
     }

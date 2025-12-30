@@ -3,11 +3,13 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
+using System.Timers;
 
 namespace AIToady.Harvester.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
+        private int _threadsToSkip = 0;
         private string _url = "akfiles.com";
         private string _nextElement = ".pageNav-jump--next";
         private string _threadElement = "";
@@ -22,6 +24,10 @@ namespace AIToady.Harvester.ViewModels
         string _siteName = "The AK Files";
         private Random _random = new Random();
         private string _rootFolder = GetDriveWithMostFreeSpace();
+        private string _startTime = "09:00";
+        private string _endTime = "17:00";
+        private System.Timers.Timer _operatingHoursTimer;
+        private string _harvestingButtonText = "Start Harvesting";
         
         private static string GetDriveWithMostFreeSpace()
         {
@@ -53,6 +59,12 @@ namespace AIToady.Harvester.ViewModels
             set => SetProperty(ref _threadElement, value);
         }
 
+        public int ThreadsToSkip
+        {
+            get => _threadsToSkip;
+            set => SetProperty(ref _threadsToSkip, value);
+        }
+
         public int PageLoadDelay
         {
             get => _pageLoadDelay;
@@ -63,6 +75,24 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _rootFolder;
             set => SetProperty(ref _rootFolder, value);
+        }
+
+        public string StartTime
+        {
+            get => _startTime;
+            set => SetProperty(ref _startTime, value);
+        }
+
+        public string EndTime
+        {
+            get => _endTime;
+            set => SetProperty(ref _endTime, value);
+        }
+
+        public string HarvestingButtonText
+        {
+            get => _harvestingButtonText;
+            set => SetProperty(ref _harvestingButtonText, value);
         }
 
         public bool IsHarvesting
@@ -93,8 +123,10 @@ namespace AIToady.Harvester.ViewModels
             LoadSettings();
             GoCommand = new RelayCommand(ExecuteGo);
             NextCommand = new RelayCommand(ExecuteNext);
-            LoadThreadsCommand = new RelayCommand(ExecuteLoadThreads);
+            //LoadThreadsCommand = new RelayCommand(ExecuteLoadThreads);
             StartHarvestingCommand = new RelayCommand(ExecuteStartHarvesting, () => !_isHarvesting || _threadLinks.Count > 0);
+            
+            InitializeOperatingHoursTimer();
         }
 
         private void LoadSettings()
@@ -102,8 +134,11 @@ namespace AIToady.Harvester.ViewModels
             Url = string.IsNullOrEmpty(Properties.Settings.Default.Url) ? "akfiles.com" : Properties.Settings.Default.Url;
             NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
             ThreadElement = Properties.Settings.Default.ThreadElement;
+            ThreadsToSkip = Properties.Settings.Default.ThreadsToSkip;
             PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 6 : Properties.Settings.Default.PageLoadDelay;
             RootFolder = string.IsNullOrEmpty(Properties.Settings.Default.RootFolder) ? GetDriveWithMostFreeSpace() : Properties.Settings.Default.RootFolder;
+            StartTime = string.IsNullOrEmpty(Properties.Settings.Default.StartTime) ? "09:00" : Properties.Settings.Default.StartTime;
+            EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "17:00" : Properties.Settings.Default.EndTime;
         }
 
         public void SaveSettings()
@@ -111,8 +146,11 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.Url = Url;
             Properties.Settings.Default.NextElement = NextElement;
             Properties.Settings.Default.ThreadElement = ThreadElement;
+            Properties.Settings.Default.ThreadsToSkip = ThreadsToSkip;
             Properties.Settings.Default.PageLoadDelay = PageLoadDelay;
             Properties.Settings.Default.RootFolder = RootFolder;
+            Properties.Settings.Default.StartTime = StartTime;
+            Properties.Settings.Default.EndTime = EndTime;
             Properties.Settings.Default.Save();
         }
 
@@ -129,6 +167,41 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
+        private void InitializeOperatingHoursTimer()
+        {
+            _operatingHoursTimer = new System.Timers.Timer(60000); // Check every minute
+            _operatingHoursTimer.Elapsed += (s, e) => CheckOperatingHours();
+            _operatingHoursTimer.Start();
+        }
+
+        private bool IsWithinOperatingHours()
+        {
+            if (!TimeSpan.TryParse(StartTime, out var startTime) || !TimeSpan.TryParse(EndTime, out var endTime))
+                return true;
+
+            var currentTime = DateTime.Now.TimeOfDay;
+            return currentTime >= startTime && currentTime <= endTime;
+        }
+
+        private void CheckOperatingHours()
+        {
+            if (_isHarvesting && !IsWithinOperatingHours())
+            {
+                _isHarvesting = false;
+                HarvestingButtonText = "Sleeping";
+            }
+            else if (!_isHarvesting && IsWithinOperatingHours() && HarvestingButtonText == "Sleeping" && _threadLinks.Count > 0)
+            {
+                HarvestingButtonText = "Start Harvesting";
+                // Auto-resume harvesting
+                Application.Current.Dispatcher.Invoke(() => ExecuteStartHarvesting());
+            }
+            else if (HarvestingButtonText == "Sleeping" && IsWithinOperatingHours())
+            {
+                HarvestingButtonText = "Start Harvesting";
+            }
+        }
+
         private async void ExecuteNext()
         {
             if (!string.IsNullOrEmpty(NextElement))
@@ -137,7 +210,7 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        private async void ExecuteLoadThreads()
+        private async Task ExecuteLoadThreads()
         {
             try
             {
@@ -174,16 +247,19 @@ namespace AIToady.Harvester.ViewModels
             if (_isHarvesting)
             {
                 _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
                 return;
             }
 
-            if (_threadLinks.Count == 0)
+            if (!IsWithinOperatingHours())
             {
-                MessageBox.Show("No threads loaded. Click 'Load Threads' first.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                HarvestingButtonText = "Sleeping";
                 return;
             }
 
             _isHarvesting = true;
+            HarvestingButtonText = "Stop Harvesting";
 
             // Get forum name from h1.p-title-value element
             string forumScript = "document.querySelector('h1.p-title-value')?.textContent?.trim() || 'Unknown Forum'";
@@ -194,19 +270,33 @@ namespace AIToady.Harvester.ViewModels
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
-                // Process all threads on current page
-                for (int i = 0; i < _threadLinks.Count && _isHarvesting; i++)
+                await ExecuteLoadThreads();
+
+                // Check operating hours after each page
+                if (!IsWithinOperatingHours())
                 {
-                    ++i;
+                    _isHarvesting = false;
+                    HarvestingButtonText = "Sleeping";
+                    break;
+                }
+
+                // Process all threads on current page
+                for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
+                {
+                    //++i;
                     //++i;
                     //++i;
                     //++i;
                     //++i;
                     var thread = await HarvestThread(_threadLinks[i]);
                     await WriteThreadInfo(thread);
+                    
+                    if (!_isHarvesting)
+                    {
+                        NavigateRequested?.Invoke(Url);
+                        return;
+                    }
                 }
-
-                NavigateRequested?.Invoke(Url);
 
                 await LoadForumPage();
 
@@ -226,8 +316,7 @@ namespace AIToady.Harvester.ViewModels
 
                     Url = await ExecuteScriptRequested?.Invoke("window.location.href");
                     Url = JsonSerializer.Deserialize<string>(Url);
-
-                    ExecuteLoadThreads();
+                    SaveSettings();
                 }
                 else
                 {
@@ -235,8 +324,12 @@ namespace AIToady.Harvester.ViewModels
                 }
             }
 
-            MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-            _isHarvesting = false;
+            if (_isHarvesting)
+            {
+                MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+            }
         }
 
         private async Task WriteThreadInfo(ForumThread thread)
@@ -256,6 +349,7 @@ namespace AIToady.Harvester.ViewModels
         {
             //Load the forum page (a thread page is currently loaded) and
             //wait for navigation to complete by checking URL
+            NavigateRequested?.Invoke(Url);
             string currentUrl;
             do
             {
@@ -417,6 +511,12 @@ namespace AIToady.Harvester.ViewModels
             {
                 NextElement = result;
             }
+        }
+
+        public void Dispose()
+        {
+            _operatingHoursTimer?.Stop();
+            _operatingHoursTimer?.Dispose();
         }
     }
 }

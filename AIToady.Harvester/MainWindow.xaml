@@ -18,9 +18,12 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
             <TextBox Width="300" Height="25" VerticalContentAlignment="Center" Text="{Binding Url}" KeyDown="UrlTextBox_KeyDown"/>
             <Button Content="Go" Width="50" Height="25" Margin="5,0,0,0" Command="{Binding GoCommand}"/>
-            <Button Content="Next" Width="50" Height="25" Margin="5,0,0,0" Command="{Binding NextCommand}"/>
-            <Button Content="Load Threads" Width="80" Height="25" Margin="5,0,0,0" Command="{Binding LoadThreadsCommand}"/>
-            <Button Content="Start Harvesting" Width="100" Height="25" Margin="5,0,0,0" Command="{Binding StartHarvestingCommand}"/>
+            <Button Content="Next"
+                    Width="50"
+                    Height="25"
+                    Margin="5,0,0,0"
+                    Command="{Binding NextCommand}" />
+            <Button Content="{Binding HarvestingButtonText}" Width="100" Height="25" Margin="5,0,0,0" Command="{Binding StartHarvestingCommand}"/>
         </StackPanel>
         
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
@@ -35,9 +38,29 @@
                      VerticalContentAlignment="Center"
                      Text="{Binding PageLoadDelay}"
                      PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput" />
+
+        </StackPanel>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
+            <Label Content="Hours of Operation:" Width="120" VerticalAlignment="Center"/>
+            <Label Content="Start Time:" Width="70" VerticalAlignment="Center"/>
+            <TextBox x:Name="StartTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding StartTime}"/>
+            <Label Content="End Time:" Width="70" VerticalAlignment="Center" Margin="10,0,0,0"/>
+            <TextBox x:Name="EndTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding EndTime}"/>
+            <Label Content="Threads to Skip:"
+                   Width="100"
+                   VerticalAlignment="Center"
+                   Margin="10,0,0,0" />
+            <TextBox x:Name="ThreadsToSkipTextBox"
+                     Width="40"
+                     Height="25"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding ThreadsToSkip}"
+                     PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput" />
             <Label Content="Root Folder:"
                    Width="80"
-                   VerticalAlignment="Center" />
+                   VerticalAlignment="Center"
+                   Margin="10,0,0,0" />
             <TextBox Width="60"
                      Height="25"
                      VerticalContentAlignment="Center"
@@ -47,9 +70,6 @@
                     Height="25"
                     Margin="5,0,0,0"
                     Click="BrowseButton_Click" />
-        </StackPanel>
-        
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
         </StackPanel>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5"/>
