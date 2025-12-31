@@ -19,5 +19,8 @@ namespace AIToady.Harvester.Models
         
         [JsonPropertyName("images")]
         public List<string> Images { get; set; } = new List<string>();
+        
+        [JsonPropertyName("attachments")]
+        public List<string> Attachments { get; set; } = new List<string>();
     }
 }

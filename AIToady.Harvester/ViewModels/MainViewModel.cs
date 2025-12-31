@@ -123,6 +123,7 @@ namespace AIToady.Harvester.ViewModels
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
         public event Func<string, string, Task> ExtractImageRequested;
+        public event Func<string, string, Task> ExtractAttachmentRequested;
 
         public MainViewModel()
         {
@@ -412,8 +413,8 @@ namespace AIToady.Harvester.ViewModels
                 {
                 }
 
-                // Extract images for each message
-                await ExtractImages(thread, imagesFolder, pageMessages);
+                // Extract images and attachments for each message
+                await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
 
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
@@ -437,10 +438,14 @@ namespace AIToady.Harvester.ViewModels
             return thread;
         }
 
-        private async Task ExtractImages(ForumThread thread, string imagesFolder, List<ForumMessage> pageMessages)
+        private async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
+            string imagesFolder = Path.Combine(threadFolder, "Images");
+            string attachmentsFolder = Path.Combine(threadFolder, "Attachments");
+            
             foreach (var message in pageMessages)
             {
+                // Process images
                 var imageNames = new List<string>();
                 for (int i = 0; i < message.Images.Count; i++)
                 {
@@ -462,6 +467,38 @@ namespace AIToady.Harvester.ViewModels
                     catch { }
                 }
                 message.Images = imageNames;
+                
+                // Process attachments
+                var attachmentNames = new List<string>();
+                for (int i = 0; i < message.Attachments.Count; i++)
+                {
+                    try
+                    {
+                        string attachmentUrl = message.Attachments[i];
+                        
+                        // Extract filename from URL path
+                        string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
+                        if (string.IsNullOrEmpty(fileName))
+                            fileName = $"attachment_{i + 1}.jpg";
+                        else
+                        {
+                            fileName = fileName.Replace("-", ".");
+                            // Remove everything after the second dot (e.g. "20250413_195050.jpg.731026" -> "20250413_195050.jpg")
+                            var parts = fileName.Split('.');
+                            if (parts.Length > 2)
+                                fileName = $"{parts[0]}.{parts[1]}";
+                        }
+
+                        if (!System.IO.Directory.Exists(attachmentsFolder))
+                            System.IO.Directory.CreateDirectory(attachmentsFolder);
+
+                        string attachmentPath = System.IO.Path.Combine(attachmentsFolder, fileName);
+                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
+                        attachmentNames.Add(fileName);
+                    }
+                    catch { }
+                }
+                message.Attachments = attachmentNames;
             }
 
             thread.Messages.AddRange(pageMessages);
@@ -476,6 +513,7 @@ namespace AIToady.Harvester.ViewModels
                     let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt');
                     let images = [];
+                    let attachments = [];
                     
                     if (messageBodyElement) {
                         messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
@@ -485,11 +523,11 @@ namespace AIToady.Harvester.ViewModels
                             }
                         });
                         
-                        // Extract attachment images
-                        messageDiv.querySelectorAll('.attachmentList .attachment-icon--img img').forEach(img => {
-                            let imageUrl = img.src;
-                            if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
-                                images.push(imageUrl);
+                        // Extract all attachment files
+                        messageDiv.querySelectorAll('.attachmentList .attachment, .attachmentList a, .attachment a').forEach(element => {
+                            let attachmentUrl = element.href || element.getAttribute('href');
+                            if (attachmentUrl) {
+                                attachments.push(attachmentUrl);
                             }
                         });
                         }
@@ -509,7 +547,8 @@ namespace AIToady.Harvester.ViewModels
                             username: userElement.textContent.trim(),
                             message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
                             timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
-                            images: images
+                            images: images,
+                            attachments: attachments
                         });
                     }
                 });
