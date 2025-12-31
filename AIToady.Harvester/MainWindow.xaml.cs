@@ -99,16 +99,68 @@ namespace AIToady.Harvester
             }
             catch { }
         }
-
         private async Task ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try
             {
-                string currentUrl = WebView.Source?.ToString();
-                WebView.Source = new Uri(imageUrl);
-                await Task.Delay(2000);
-                
-                string script = @"
+                // First try simple HttpClient approach
+                using (var httpClient = new System.Net.Http.HttpClient())
+                {
+                    var userAgent = await WebView.ExecuteScriptAsync("navigator.userAgent");
+                    userAgent = userAgent.Trim('"');
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+
+                    var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
+
+                    // Check if content is HTML (captcha page)
+                    string content = System.Text.Encoding.UTF8.GetString(imageBytes.Take(100).ToArray());
+                    if (content.Contains("<html>") || content.Contains("<HTML>"))
+                    {
+                        // Use WebView2 navigation for captcha pages
+                        string currentUrl = WebView.Source?.ToString();
+                        WebView.Source = new Uri(imageUrl);
+                        await Task.Delay(2000);
+
+                        string script = @"
+                            var img = document.querySelector('img');
+                            if (img && img.complete) {
+                                var canvas = document.createElement('canvas');
+                                canvas.width = img.naturalWidth || img.width;
+                                canvas.height = img.naturalHeight || img.height;
+                                var ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                canvas.toDataURL().split(',')[1];
+                            } else null;
+                        ";
+
+                        string result = await WebView.ExecuteScriptAsync(script);
+                        if (!string.IsNullOrEmpty(currentUrl))
+                            WebView.Source = new Uri(currentUrl);
+
+                        do
+                            await Task.Delay(500);
+                        while (currentUrl != WebView.Source?.ToString());
+
+                        if (!string.IsNullOrEmpty(result) && result != "null")
+                        {
+                            result = result.Trim('"');
+                            imageBytes = Convert.FromBase64String(result);
+                        }
+                        else return;
+                    }
+
+                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                }
+            }
+            catch 
+            {
+                try
+                {
+                    string currentUrl = WebView.Source?.ToString();
+                    WebView.Source = new Uri(imageUrl);
+                    await Task.Delay(2000);
+
+                    string script = @"
                     var img = document.querySelector('img');
                     if (img && img.complete) {
                         var canvas = document.createElement('canvas');
@@ -119,23 +171,24 @@ namespace AIToady.Harvester
                         canvas.toDataURL().split(',')[1];
                     } else null;
                 ";
-                
-                string result = await WebView.ExecuteScriptAsync(script);
-                if (!string.IsNullOrEmpty(currentUrl))
-                    WebView.Source = new Uri(currentUrl);
 
-                do
-                    await Task.Delay(500);
-                while (currentUrl != WebView.Source?.ToString());
+                    string result = await WebView.ExecuteScriptAsync(script);
+                    if (!string.IsNullOrEmpty(currentUrl))
+                        WebView.Source = new Uri(currentUrl);
 
-                if (!string.IsNullOrEmpty(result) && result != "null")
-                {
-                    result = result.Trim('"');
-                    var imageBytes = Convert.FromBase64String(result);
-                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                    do
+                        await Task.Delay(500);
+                    while (currentUrl != WebView.Source?.ToString());
+
+                    if (!string.IsNullOrEmpty(result) && result != "null")
+                    {
+                        result = result.Trim('"');
+                        var imageBytes = Convert.FromBase64String(result);
+                        await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                    }
                 }
+                catch { }
             }
-            catch { }
         }
 
         private async void WebView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)

@@ -395,9 +395,14 @@ namespace AIToady.Harvester.ViewModels
             // Extract site name from thread title (assuming format like "ThreadName | The AK Files")
             if (thread.ThreadName.Contains(" | "))
             {
-                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}_{DateTime.Now.ToString("yyyyMMdd_HHmmss")}";
+                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}";
                 _siteName = thread.ThreadName.Split(" | ").Last().Trim();
             }
+
+            // Extract thread ID from URL and append to thread name
+            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
+            if (!string.IsNullOrEmpty(threadId))
+                _threadName += $"_{threadId}";
 
             _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
             string threadFolder = Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
@@ -452,9 +457,7 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string imageUrl = message.Images[i];
-                        string fileName = System.IO.Path.GetFileName(new Uri(imageUrl).LocalPath);
-                        if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
-                            fileName = $"image_{_threadImageCounter}.jpg";
+                        string fileName = GetFileNameFromUrl(i, imageUrl);
 
                         if (!System.IO.Directory.Exists(imagesFolder))
                             System.IO.Directory.CreateDirectory(imagesFolder);
@@ -475,19 +478,7 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string attachmentUrl = message.Attachments[i];
-                        
-                        // Extract filename from URL path
-                        string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
-                        if (string.IsNullOrEmpty(fileName))
-                            fileName = $"attachment_{i + 1}.jpg";
-                        else
-                        {
-                            fileName = fileName.Replace("-", ".");
-                            // Remove everything after the second dot (e.g. "20250413_195050.jpg.731026" -> "20250413_195050.jpg")
-                            var parts = fileName.Split('.');
-                            if (parts.Length > 2)
-                                fileName = $"{parts[0]}.{parts[1]}";
-                        }
+                        string fileName = GetFileNameFromUrl(i, attachmentUrl);
 
                         if (!System.IO.Directory.Exists(attachmentsFolder))
                             System.IO.Directory.CreateDirectory(attachmentsFolder);
@@ -502,6 +493,28 @@ namespace AIToady.Harvester.ViewModels
             }
 
             thread.Messages.AddRange(pageMessages);
+        }
+
+        private static string GetFileNameFromUrl(int fileIndex, string attachmentUrl)
+        {
+            // Extract filename from URL path
+            string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
+            if (string.IsNullOrEmpty(fileName))
+            {
+                fileName = $"attachment_{fileIndex + 1}.jpg";
+            }
+            else
+            {
+                fileName = fileName.Replace("-", ".");
+                // Remove everything after the second dot (e.g. "20250413_195050.jpg.731026" -> "20250413_195050.jpg")
+                var parts = fileName.Split('.');
+                if (parts.Length > 1 && int.TryParse(parts[parts.Length - 1], out _))
+                {
+                    fileName = string.Join(".", parts.Take(parts.Length - 1));
+                }
+            }
+
+            return fileName;
         }
 
         private async Task<List<ForumMessage>> HarvestPage()
@@ -524,12 +537,14 @@ namespace AIToady.Harvester.ViewModels
                         });
                         
                         // Extract all attachment files
-                        messageDiv.querySelectorAll('.attachmentList .attachment, .attachmentList a, .attachment a').forEach(element => {
-                            let attachmentUrl = element.href || element.getAttribute('href');
-                            if (attachmentUrl) {
-                                attachments.push(attachmentUrl);
+                        let attachmentUrls = new Set();
+                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {
+                            let attachmentUrl = element.href;
+                            if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
+                                attachmentUrls.add(attachmentUrl);
                             }
                         });
+                        attachments = Array.from(attachmentUrls);
                         }
                     
                     if (userElement && messageBodyElement) {
