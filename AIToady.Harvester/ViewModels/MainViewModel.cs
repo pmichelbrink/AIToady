@@ -1,4 +1,5 @@
 using AIToady.Harvester.Models;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -9,6 +10,9 @@ namespace AIToady.Harvester.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
+        private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
+        private int _forumPageNumber = 1;
+        private int _threadPageNumber = 1;
         private int _threadsToSkip = 0;
         private string _url = "akfiles.com";
         private string _nextElement = ".pageNav-jump--next";
@@ -58,6 +62,8 @@ namespace AIToady.Harvester.ViewModels
             get => _threadElement;
             set => SetProperty(ref _threadElement, value);
         }
+
+        public ObservableCollection<LogEntry> LogEntries => _logEntries;
 
         public int ThreadsToSkip
         {
@@ -242,6 +248,18 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
+        private int GetPageNumberFromUrl(string url)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(url, @"/page-(\d+)");
+            return match.Success ? int.Parse(match.Groups[1].Value) : 1;
+        }
+
+        private void AddLogEntry(string message)
+        {
+            Application.Current.Dispatcher.Invoke(() => 
+                _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
+        }
+
         private async void ExecuteStartHarvesting()
         {
             if (_isHarvesting)
@@ -260,6 +278,7 @@ namespace AIToady.Harvester.ViewModels
 
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
+            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
 
             // Get forum name from h1.p-title-value element
             string forumScript = "document.querySelector('h1.p-title-value')?.textContent?.trim() || 'Unknown Forum'";
@@ -283,11 +302,7 @@ namespace AIToady.Harvester.ViewModels
                 // Process all threads on current page
                 for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
                 {
-                    //++i;
-                    //++i;
-                    //++i;
-                    //++i;
-                    //++i;
+                    AddLogEntry(_threadLinks[i]);
                     var thread = await HarvestThread(_threadLinks[i]);
                     await WriteThreadInfo(thread);
                     
@@ -318,6 +333,7 @@ namespace AIToady.Harvester.ViewModels
 
                     Url = await ExecuteScriptRequested?.Invoke("window.location.href");
                     Url = JsonSerializer.Deserialize<string>(Url);
+                    AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
                     SaveSettings();
                 }
                 else
@@ -364,6 +380,7 @@ namespace AIToady.Harvester.ViewModels
         private async Task<ForumThread> HarvestThread(string threadUrl)
         {
             _threadImageCounter = 1;
+            _threadPageNumber = 1;
             NavigateRequested?.Invoke(threadUrl);
             await Task.Delay(GetRandomizedDelay());
             
@@ -398,6 +415,8 @@ namespace AIToady.Harvester.ViewModels
                 // Extract images for each message
                 await ExtractImages(thread, imagesFolder, pageMessages);
 
+                AddLogEntry($"Page {_threadPageNumber} Harvested");
+
                 // Check if NextElement exists and click it
                 string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                 string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
@@ -405,6 +424,7 @@ namespace AIToady.Harvester.ViewModels
 
                 if (nextResult == "found")
                 {
+                    _threadPageNumber++;
                     await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
                     await Task.Delay(GetRandomizedDelay());
                 }
@@ -464,6 +484,7 @@ namespace AIToady.Harvester.ViewModels
                                 images.push(imageUrl);
                             }
                         });
+                        }
                     }
                     
                     if (userElement && messageBodyElement) {

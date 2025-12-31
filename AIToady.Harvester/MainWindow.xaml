@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="200"/>
         </Grid.RowDefinitions>
         
         <Grid Grid.Row="0" Margin="5">
@@ -56,7 +57,10 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Hours of Operation:" Width="120" VerticalAlignment="Center"/>
             <Label Grid.Column="1" Content="Start Time:" Width="70" VerticalAlignment="Center"/>
@@ -73,5 +77,30 @@
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5"/>
+        
+        <ListView Grid.Row="4" ItemsSource="{Binding LogEntries}" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Log" Width="600" DisplayMemberBinding="{Binding Log}">
+                        <GridViewColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <Button Content="Log"
+                                        Width="600"
+                                        Click="LogColumnHeader_Click" Tag="Log" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0"/>
+                            </DataTemplate>
+                        </GridViewColumn.HeaderTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Date" Width="150" DisplayMemberBinding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}">
+                        <GridViewColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <Button Content="Date"
+                                        Width="150"
+                                        Click="LogColumnHeader_Click" Tag="Date" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0"/>
+                            </DataTemplate>
+                        </GridViewColumn.HeaderTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
     </Grid>
 </Window>

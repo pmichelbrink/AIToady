@@ -4,6 +4,7 @@ using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace AIToady.Harvester
@@ -265,6 +266,25 @@ namespace AIToady.Harvester
 
             popup.Child = border;
             popup.IsOpen = true;
+        }
+
+        private string _lastSortColumn = "";
+        private bool _lastSortAscending = true;
+
+        private void LogColumnHeader_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var columnName = button?.Tag?.ToString();
+            
+            var view = CollectionViewSource.GetDefaultView(_viewModel.LogEntries);
+            view.SortDescriptions.Clear();
+            
+            bool ascending = _lastSortColumn != columnName || !_lastSortAscending;
+            _lastSortColumn = columnName;
+            _lastSortAscending = ascending;
+            
+            var direction = ascending ? System.ComponentModel.ListSortDirection.Ascending : System.ComponentModel.ListSortDirection.Descending;
+            view.SortDescriptions.Add(new System.ComponentModel.SortDescription(columnName, direction));
         }
     }
 }
