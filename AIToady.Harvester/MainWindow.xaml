@@ -1,4 +1,4 @@
-﻿<Window x:Class="AIToady.Harvester.MainWindow"
+<Window x:Class="AIToady.Harvester.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -15,62 +15,62 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
-            <TextBox Width="300" Height="25" VerticalContentAlignment="Center" Text="{Binding Url}" KeyDown="UrlTextBox_KeyDown"/>
-            <Button Content="Go" Width="50" Height="25" Margin="5,0,0,0" Command="{Binding GoCommand}"/>
-            <Button Content="Next"
-                    Width="50"
-                    Height="25"
-                    Margin="5,0,0,0"
-                    Command="{Binding NextCommand}" />
-            <Button Content="{Binding HarvestingButtonText}" Width="100" Height="25" Margin="5,0,0,0" Command="{Binding StartHarvestingCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Height="25" VerticalContentAlignment="Center" Text="{Binding Url}" KeyDown="UrlTextBox_KeyDown" Margin="0,0,5,0"/>
+            <Button Grid.Column="1" Content="Go" Width="50" Height="25" Margin="0,0,5,0" Command="{Binding GoCommand}"/>
+            <Button Grid.Column="2" Content="Next" Width="50" Height="25" Margin="0,0,5,0" Command="{Binding NextCommand}"/>
+            <Button Grid.Column="3" Content="{Binding HarvestingButtonText}" Width="100" Height="25" Command="{Binding StartHarvestingCommand}"/>
+        </Grid>
         
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5">
-            <Label Content="Next Element:" Width="80" VerticalAlignment="Center"/>
-            <TextBox x:Name="NextElementTextBox" Width="80" Height="25" VerticalContentAlignment="Center" Text="{Binding NextElement}" GotFocus="NextElementTextBox_GotFocus" LostFocus="NextElementTextBox_LostFocus"/>
-            <Label Content="Thread Element:" Width="100" VerticalAlignment="Center" Margin="10,0,0,0"/>
-            <TextBox x:Name="ThreadElementTextBox" Width="80" Height="25" VerticalContentAlignment="Center" Text="{Binding ThreadElement}" GotFocus="ThreadElementTextBox_GotFocus" LostFocus="ThreadElementTextBox_LostFocus"/>
-            <Label Content="Page Load Delay (seconds):" Width="150" VerticalAlignment="Center" Margin="10,0,0,0"/>
-            <TextBox x:Name="PageLoadDelayTextBox"
-                     Width="30"
-                     Height="25"
-                     VerticalContentAlignment="Center"
-                     Text="{Binding PageLoadDelay}"
-                     PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput" />
-
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Next Element:" Width="80" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" x:Name="NextElementTextBox" Width="80" Height="25" VerticalContentAlignment="Center" Text="{Binding NextElement}" GotFocus="NextElementTextBox_GotFocus" LostFocus="NextElementTextBox_LostFocus" Margin="0,0,10,0"/>
+            <Label Grid.Column="2" Content="Thread Element:" Width="100" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="3" x:Name="ThreadElementTextBox" Width="80" Height="25" VerticalContentAlignment="Center" Text="{Binding ThreadElement}" GotFocus="ThreadElementTextBox_GotFocus" LostFocus="ThreadElementTextBox_LostFocus" Margin="0,0,10,0"/>
+            <Label Grid.Column="4" Content="Page Load Delay (seconds):" Width="150" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="5" x:Name="PageLoadDelayTextBox" Width="30" Height="25" VerticalContentAlignment="Center" Text="{Binding PageLoadDelay}" PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput"/>
+        </Grid>
         
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="5">
-            <Label Content="Hours of Operation:" Width="120" VerticalAlignment="Center"/>
-            <Label Content="Start Time:" Width="70" VerticalAlignment="Center"/>
-            <TextBox x:Name="StartTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding StartTime}"/>
-            <Label Content="End Time:" Width="70" VerticalAlignment="Center" Margin="10,0,0,0"/>
-            <TextBox x:Name="EndTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding EndTime}"/>
-            <Label Content="Threads to Skip:"
-                   Width="100"
-                   VerticalAlignment="Center"
-                   Margin="10,0,0,0" />
-            <TextBox x:Name="ThreadsToSkipTextBox"
-                     Width="40"
-                     Height="25"
-                     VerticalContentAlignment="Center"
-                     Text="{Binding ThreadsToSkip}"
-                     PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput" />
-            <Label Content="Root Folder:"
-                   Width="80"
-                   VerticalAlignment="Center"
-                   Margin="10,0,0,0" />
-            <TextBox Width="60"
-                     Height="25"
-                     VerticalContentAlignment="Center"
-                     Text="{Binding RootFolder}" />
-            <Button Content="Browse"
-                    Width="60"
-                    Height="25"
-                    Margin="5,0,0,0"
-                    Click="BrowseButton_Click" />
-        </StackPanel>
+        <Grid Grid.Row="2" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Hours of Operation:" Width="120" VerticalAlignment="Center"/>
+            <Label Grid.Column="1" Content="Start Time:" Width="70" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="2" x:Name="StartTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding StartTime}" Margin="0,0,2,0"/>
+            <Button Grid.Column="3" Content="🕐" Width="25" Height="25" Click="StartTimePickerButton_Click" Margin="0,0,10,0"/>
+            <Label Grid.Column="4" Content="End Time:" Width="70" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="5" x:Name="EndTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding EndTime}" Margin="0,0,2,0"/>
+            <Button Grid.Column="6" Content="🕐" Width="25" Height="25" Click="EndTimePickerButton_Click" Margin="0,0,10,0"/>
+            <Label Grid.Column="7" Content="Threads to Skip:" Width="100" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="8" x:Name="ThreadsToSkipTextBox" Width="40" Height="25" VerticalContentAlignment="Center" Text="{Binding ThreadsToSkip, Mode=TwoWay}" PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput" Margin="0,0,10,0"/>
+            <Label Grid.Column="9" Content="Root Folder:" Width="80" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="10" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding RootFolder}" Margin="0,0,5,0"/>
+            <Button Grid.Column="11" Content="Browse" Width="60" Height="25" Click="BrowseButton_Click"/>
+        </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5"/>
     </Grid>

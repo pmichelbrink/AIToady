@@ -223,7 +223,7 @@ namespace AIToady.Harvester.ViewModels
                         divs.forEach(div => {{
                             let anchors = div.querySelectorAll('a');
                             anchors.forEach(a => {{
-                                if (a.href) links.push(a.href);
+                                if (a.href && a.href.includes('/threads/')) links.push(a.href);
                             }});
                         }});
                         JSON.stringify(links);
@@ -297,6 +297,8 @@ namespace AIToady.Harvester.ViewModels
                         return;
                     }
                 }
+
+                ThreadsToSkip = 0;
 
                 await LoadForumPage();
 
@@ -388,6 +390,10 @@ namespace AIToady.Harvester.ViewModels
             while (_isHarvesting && hasNextPage)
             {
                 var pageMessages = await HarvestPage();
+
+                if (pageMessages.Count == 0)
+                {
+                }
 
                 // Extract images for each message
                 await ExtractImages(thread, imagesFolder, pageMessages);
