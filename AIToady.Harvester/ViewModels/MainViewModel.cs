@@ -484,8 +484,15 @@ namespace AIToady.Harvester.ViewModels
                                 images.push(imageUrl);
                             }
                         });
+                        
+                        // Extract attachment images
+                        messageDiv.querySelectorAll('.attachmentList .attachment-icon--img img').forEach(img => {
+                            let imageUrl = img.src;
+                            if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
+                                images.push(imageUrl);
+                            }
+                        });
                         }
-                    }
                     
                     if (userElement && messageBodyElement) {
                         let postId = '';
