@@ -96,6 +96,16 @@ namespace AIToady.Harvester
                     var attachmentBytes = Convert.FromBase64String(result);
                     await System.IO.File.WriteAllBytesAsync(filePath, attachmentBytes);
                 }
+
+                // Check Downloads folder for the file
+                string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                string fileName = System.IO.Path.GetFileName(filePath);
+                string downloadedFile = System.IO.Path.Combine(downloadsPath, fileName);
+
+                if (System.IO.File.Exists(downloadedFile))
+                {
+                    System.IO.File.Move(downloadedFile, filePath, true);
+                }
             }
             catch { }
         }

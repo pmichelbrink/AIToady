@@ -32,6 +32,7 @@ namespace AIToady.Harvester.ViewModels
         private string _endTime = "17:00";
         private System.Timers.Timer _operatingHoursTimer;
         private string _harvestingButtonText = "Start Harvesting";
+        private bool _stopAfterCurrentPage = false;
         
         private static string GetDriveWithMostFreeSpace()
         {
@@ -111,6 +112,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _isCapturingElement;
             set => SetProperty(ref _isCapturingElement, value);
+        }
+
+        public bool StopAfterCurrentPage
+        {
+            get => _stopAfterCurrentPage;
+            set => SetProperty(ref _stopAfterCurrentPage, value);
         }
 
         public List<string> ThreadLinks => _threadLinks;
@@ -326,16 +333,24 @@ namespace AIToady.Harvester.ViewModels
 
                 if (nextResult == "found")
                 {
-                    //Load the next page by clicking the Next element
-                    await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+                    if (_stopAfterCurrentPage)
+                    {
+                        hasNextForumPage = false;
+                        AddLogEntry("Stopping after current page as requested");
+                    }
+                    else
+                    {
+                        //Load the next page by clicking the Next element
+                        await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
 
-                    //Wait for navigation to complete
-                    await Task.Delay(GetRandomizedDelay());
+                        //Wait for navigation to complete
+                        await Task.Delay(GetRandomizedDelay());
 
-                    Url = await ExecuteScriptRequested?.Invoke("window.location.href");
-                    Url = JsonSerializer.Deserialize<string>(Url);
-                    AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-                    SaveSettings();
+                        Url = await ExecuteScriptRequested?.Invoke("window.location.href");
+                        Url = JsonSerializer.Deserialize<string>(Url);
+                        AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                        SaveSettings();
+                    }
                 }
                 else
                 {
