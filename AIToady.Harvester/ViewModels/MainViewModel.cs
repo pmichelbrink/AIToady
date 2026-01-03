@@ -266,14 +266,41 @@ namespace AIToady.Harvester.ViewModels
 
                 // Check if NextElement exists and click it
                 string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                string nextResult = null;
+                try
+                {
+                    nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                    nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                }
+                catch (TaskCanceledException)
+                {
+                    AddLogEntry("Script execution timeout, retrying...");
+                    await Task.Delay(2000);
+                    try
+                    {
+                        nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                        nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                    }
+                    catch
+                    {
+                        AddLogEntry("Failed to check next page, assuming no more pages");
+                        nextResult = "not_found";
+                    }
+                }
 
                 if (nextResult == "found")
                 {
                     _threadPageNumber++;
-                    await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-                    await Task.Delay(GetRandomizedDelay());
+                    try
+                    {
+                        await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+                        await Task.Delay(GetRandomizedDelay());
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry("Navigation timeout, continuing to next thread");
+                        hasNextPage = false;
+                    }
                 }
                 else
                 {
@@ -308,7 +335,14 @@ namespace AIToady.Harvester.ViewModels
                         imageNames.Add(fileName);
                         _threadImageCounter++;
                     }
-                    catch { }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry($"Image extraction timeout for image {i + 1}, skipping");
+                    }
+                    catch
+                    {
+                        AddLogEntry($"Failed to extract image {i + 1}, skipping");
+                    }
                 }
                 message.Images = imageNames;
                 
@@ -328,7 +362,14 @@ namespace AIToady.Harvester.ViewModels
                         await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
                         attachmentNames.Add(fileName);
                     }
-                    catch { }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry($"Attachment extraction timeout for attachment {i + 1}, skipping");
+                    }
+                    catch
+                    {
+                        AddLogEntry($"Failed to extract attachment {i + 1}, skipping");
+                    }
                 }
                 message.Attachments = attachmentNames;
             }
@@ -436,9 +477,9 @@ namespace AIToady.Harvester.ViewModels
                             }
                         });
                         
-                        // Extract attachment files
+                        // Extract attachment files from attachmentList
                         let attachmentUrls = new Set();
-                        messageDiv.querySelectorAll('.attachmentList .attachment a, a[href*=\'/attachments/\']').forEach(element => {
+                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {
                             let attachmentUrl = element.href;
                             if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
                                 attachmentUrls.add(attachmentUrl);
