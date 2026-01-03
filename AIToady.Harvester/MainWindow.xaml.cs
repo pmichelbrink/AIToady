@@ -1,5 +1,6 @@
 using AIToady.Harvester.ViewModels;
 using System;
+using System.IO;
 using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
@@ -52,6 +53,16 @@ namespace AIToady.Harvester
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (_viewModel.IsHarvesting)
+            {
+                var result = MessageBox.Show("Harvesting is in progress. Are you sure you want to exit?", "Confirm Exit", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result == MessageBoxResult.No)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+            
             Properties.Settings.Default.WindowWidth = Width;
             Properties.Settings.Default.WindowHeight = Height;
             Properties.Settings.Default.WindowLeft = Left;
@@ -97,18 +108,25 @@ namespace AIToady.Harvester
                     await System.IO.File.WriteAllBytesAsync(filePath, attachmentBytes);
                 }
 
-                // Check Downloads folder for the file
-                string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                string fileName = System.IO.Path.GetFileName(filePath);
-                string downloadedFile = System.IO.Path.Combine(downloadsPath, fileName);
 
-                if (System.IO.File.Exists(downloadedFile))
+
+                if (Path.GetExtension(filePath).ToLower().Contains("mov") ||
+                    Path.GetExtension(filePath).ToLower().Contains("pdf"))
                 {
-                    System.IO.File.Move(downloadedFile, filePath, true);
+                    // Check Downloads folder for the file
+                    string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                    string fileName = System.IO.Path.GetFileName(filePath);
+                    string downloadedFile = System.IO.Path.Combine(downloadsPath, fileName);
+
+                    if (System.IO.Directory.Exists(downloadedFile))
+                    {
+                        System.IO.File.Move(downloadedFile, filePath, true);
+                    }
                 }
             }
             catch { }
         }
+
         private async Task ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try

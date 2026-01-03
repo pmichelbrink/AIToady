@@ -266,6 +266,19 @@ namespace AIToady.Harvester.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() => 
                 _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
+            
+            // Write to log file if forum folder exists
+            if (!string.IsNullOrEmpty(_forumName) && !string.IsNullOrEmpty(_siteName))
+            {
+                try
+                {
+                    string forumFolder = Path.Combine(_rootFolder, _siteName, _forumName);
+                    Directory.CreateDirectory(forumFolder);
+                    string logFile = Path.Combine(forumFolder, "harvest.log");
+                    File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
+                }
+                catch { }
+            }
         }
 
         private async void ExecuteStartHarvesting()
