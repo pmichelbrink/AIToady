@@ -46,6 +46,13 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
+                // Ensure WebView2 is initialized before executing scripts
+                if (ExecuteScriptRequested == null)
+                {
+                    AddLogEntry("WebView2 not ready. Please navigate to a page first.");
+                    return;
+                }
+
                 string className = ThreadElement.Trim();
                 if (!string.IsNullOrEmpty(className))
                 {
@@ -70,7 +77,7 @@ namespace AIToady.Harvester.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading threads: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                AddLogEntry($"Error loading threads: {ex.Message}");
             }
         }
 
@@ -96,15 +103,25 @@ namespace AIToady.Harvester.ViewModels
                 return;
             }
 
+            if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
+            {
+                MessageBox.Show("Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
+            {
+                MessageBox.Show("Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return;
+            }
+
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
             AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-
-            // Get forum name from h1.p-title-value element
-            string forumScript = "document.querySelector('h1.p-title-value')?.textContent?.trim() || 'Unknown Forum'";
-            string forumResult = await ExecuteScriptRequested?.Invoke(forumScript);
-            _forumName = JsonSerializer.Deserialize<string>(forumResult) ?? "Unknown Forum";
-            _forumName = string.Join("_", _forumName.Split(System.IO.Path.GetInvalidFileNameChars()));
 
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
@@ -205,13 +222,11 @@ namespace AIToady.Harvester.ViewModels
             string titleScript = "document.title";
             string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
             thread.ThreadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
-            
-            // Extract site name from thread title (assuming format like "ThreadName | The AK Files")
-            if (thread.ThreadName.Contains(" | "))
-            {
-                _threadName = $"{thread.ThreadName.Split(" | ").First().Trim()}";
-                _siteName = thread.ThreadName.Split(" | ").Last().Trim();
-            }
+
+            _threadName = thread.ThreadName;
+
+            if (_threadName.Contains('|'))
+                _threadName = _threadName.Split('|')[0].Trim();
 
             // Extract thread ID from URL and append to thread name
             var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
@@ -219,7 +234,7 @@ namespace AIToady.Harvester.ViewModels
                 _threadName += $"_{threadId}";
 
             _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
-            string threadFolder = Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
+            string threadFolder = Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
             
             // Check if thread folder exists and skip if SkipExistingThreads is true
             if (SkipExistingThreads && Directory.Exists(threadFolder))
@@ -233,7 +248,12 @@ namespace AIToady.Harvester.ViewModels
             bool hasNextPage = true;
             while (_isHarvesting && hasNextPage)
             {
-                var pageMessages = await HarvestPage();
+                List<ForumMessage> pageMessages = null;
+                
+                if (threadUrl.Contains("akforum.net"))
+                    pageMessages = await HarvestAKForumPage();
+                else
+                    pageMessages = await HarvestPage();
 
                 if (pageMessages.Count == 0)
                 {
@@ -319,49 +339,138 @@ namespace AIToady.Harvester.ViewModels
 
         private async Task<List<ForumMessage>> HarvestPage()
         {
-            string extractScript = @"
+            string messageSelector = string.IsNullOrEmpty(MessageElement) ? ".message-inner" : MessageElement;
+            string extractScript = $@"
                 let messages = [];
-                document.querySelectorAll('.message-inner').forEach(messageDiv => {
+                document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
                     let userElement = messageDiv.querySelector('.message-name a');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt');
                     let images = [];
                     let attachments = [];
                     
-                    if (messageBodyElement) {
-                        messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
+                    if (messageBodyElement) {{
+                        messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {{
                             let imageUrl = img.getAttribute('data-url') || img.src;
+                            if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {{
+                                images.push(imageUrl);
+                            }}
+                        }});
+                        
+                        // Extract all attachment files
+                        let attachmentUrls = new Set();
+                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {{
+                            let attachmentUrl = element.href;
+                            if (attachmentUrl && attachmentUrl.includes('/attachments/')) {{
+                                attachmentUrls.add(attachmentUrl);
+                            }}
+                        }});
+                        attachments = Array.from(attachmentUrls);
+                        }}
+                    
+                    if (userElement && messageBodyElement) {{
+                        let postId = '';
+                        let currentElement = messageDiv;
+                        while (currentElement && !postId) {{
+                            postId = currentElement.getAttribute('data-lb-id') || currentElement.getAttribute('id') || '';
+                            currentElement = currentElement.parentElement;
+                        }}
+                        if (postId.startsWith('js-')) {{
+                            postId = postId.substring(3);
+                        }}
+                        messages.push({{
+                            postId: postId,
+                            username: userElement.textContent.trim(),
+                            message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
+                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
+                            images: images,
+                            attachments: attachments
+                        }});
+                    }}
+                }});
+                JSON.stringify(messages);
+            ";
+            
+            string result = await ExecuteScriptRequested?.Invoke(extractScript);
+            if (!string.IsNullOrEmpty(result))
+            {
+                try
+                {
+                    result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
+                    return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                }
+                catch
+                {
+                    return new List<ForumMessage>();
+                }
+            }
+            
+            return new List<ForumMessage>();
+        }
+
+        private async Task<List<ForumMessage>> HarvestAKForumPage()
+        {
+            string extractScript = @"
+                let messages = [];
+                document.querySelectorAll('.js-quickEditTarget.message-cell-content-wrapper').forEach(messageDiv => {
+                    let userElement = messageDiv.querySelector('.message-userContent .message-name a, .message-userContent .username a');
+                    let messageBodyElement = messageDiv.querySelector('.message-body');
+                    let timeElement = messageDiv.querySelector('.u-dt, time');
+                    let images = [];
+                    let attachments = [];
+                    
+                    if (messageBodyElement) {
+                        // Extract images from bbImage elements
+                        messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
+                            let imageUrl = img.getAttribute('data-url') || img.getAttribute('data-src') || img.src;
                             if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
                                 images.push(imageUrl);
                             }
                         });
                         
-                        // Extract all attachment files
+                        // Extract images from lbContainer elements
+                        messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
+                            let imageUrl = zoomer.getAttribute('data-src');
+                            if (imageUrl && !images.includes(imageUrl)) {
+                                images.push(imageUrl);
+                            }
+                        });
+                        
+                        // Extract attachment files
                         let attachmentUrls = new Set();
-                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {
+                        messageDiv.querySelectorAll('.attachmentList .attachment a, a[href*=\'/attachments/\']').forEach(element => {
                             let attachmentUrl = element.href;
                             if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
                                 attachmentUrls.add(attachmentUrl);
                             }
                         });
                         attachments = Array.from(attachmentUrls);
-                        }
+                    }
                     
-                    if (userElement && messageBodyElement) {
+                    if (messageBodyElement) {
                         let postId = '';
                         let currentElement = messageDiv;
                         while (currentElement && !postId) {
-                            postId = currentElement.getAttribute('data-lb-id') || currentElement.getAttribute('id') || '';
+                            let dataLbId = currentElement.getAttribute('data-lb-id');
+                            if (dataLbId && dataLbId.startsWith('post-')) {
+                                postId = dataLbId.replace('post-', '');
+                                break;
+                            }
+                            postId = currentElement.getAttribute('id') || '';
                             currentElement = currentElement.parentElement;
                         }
                         if (postId.startsWith('js-')) {
                             postId = postId.substring(3);
                         }
+                        
+                        let username = userElement ? userElement.textContent.trim() : 'Unknown User';
+                        let timestamp = timeElement ? (timeElement.getAttribute('datetime') || timeElement.getAttribute('title') || timeElement.textContent) : '';
+                        
                         messages.push({
                             postId: postId,
-                            username: userElement.textContent.trim(),
-                            message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
-                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
+                            username: username,
+                            message: messageBodyElement.textContent.trim().replace(/\\s+/g, ' '),
+                            timestamp: timestamp,
                             images: images,
                             attachments: attachments
                         });
@@ -387,4 +496,4 @@ namespace AIToady.Harvester.ViewModels
             return new List<ForumMessage>();
         }
     }
-}
+} 

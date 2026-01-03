@@ -12,6 +12,11 @@ namespace AIToady.Harvester.ViewModels
 {
     public class BaseViewModel : INotifyPropertyChanged
     {
+        protected string _siteName = "";
+        protected string _forumName = "";
+        protected string _messageElement = "";
+        protected string _imageElement = "";
+        protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
         protected string _url = "akfiles.com";
@@ -32,9 +37,7 @@ namespace AIToady.Harvester.ViewModels
         protected int _threadPageNumber = 1;
         protected int _currentThreadIndex = 0;
         protected int _threadImageCounter = 1;
-        protected string _forumName;
         protected string _threadName;
-        protected string _siteName = "Unknown Site";
         protected System.Timers.Timer _operatingHoursTimer;
 
         protected virtual void ExecuteStartHarvesting() { }
@@ -47,7 +50,35 @@ namespace AIToady.Harvester.ViewModels
                 .OrderByDescending(d => d.AvailableFreeSpace)
                 .FirstOrDefault()?.Name ?? "C:\\";
         }
-        
+        public string SiteName
+        {
+            get => _siteName;
+            set => SetProperty(ref _siteName, value);
+        }
+
+        public string ForumName
+        {
+            get => _forumName;
+            set => SetProperty(ref _forumName, value);
+        }
+
+        public string MessageElement
+        {
+            get => _messageElement;
+            set => SetProperty(ref _messageElement, value);
+        }
+
+        public string ImageElement
+        {
+            get => _imageElement;
+            set => SetProperty(ref _imageElement, value);
+        }
+
+        public string AttachmentElement
+        {
+            get => _attachmentElement;
+            set => SetProperty(ref _attachmentElement, value);
+        }
         public string Url
         {
             get => _url;
@@ -176,6 +207,11 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.StartTime = StartTime;
             Properties.Settings.Default.EndTime = EndTime;
             Properties.Settings.Default.SkipExistingThreads = SkipExistingThreads;
+            Properties.Settings.Default.SiteName = SiteName;
+            Properties.Settings.Default.ForumName = ForumName;
+            Properties.Settings.Default.MessageElement = MessageElement;
+            Properties.Settings.Default.ImageElement = ImageElement;
+            Properties.Settings.Default.AttachmentElement = AttachmentElement;
             Properties.Settings.Default.Save();
         }
         public void LoadSettings()
@@ -189,6 +225,11 @@ namespace AIToady.Harvester.ViewModels
             StartTime = string.IsNullOrEmpty(Properties.Settings.Default.StartTime) ? "09:00" : Properties.Settings.Default.StartTime;
             EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "17:00" : Properties.Settings.Default.EndTime;
             SkipExistingThreads = Properties.Settings.Default.SkipExistingThreads;
+            SiteName = Properties.Settings.Default.SiteName ?? "";
+            ForumName = Properties.Settings.Default.ForumName ?? "";
+            MessageElement = Properties.Settings.Default.MessageElement ?? "";
+            ImageElement = Properties.Settings.Default.ImageElement ?? "";
+            AttachmentElement = Properties.Settings.Default.AttachmentElement ?? "";
         }
         public void InitializeOperatingHoursTimer()
         {
@@ -230,11 +271,11 @@ namespace AIToady.Harvester.ViewModels
                 _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
 
             // Write to log file if forum folder exists
-            if (!string.IsNullOrEmpty(_forumName) && !string.IsNullOrEmpty(_siteName))
+            if (!string.IsNullOrEmpty(ForumName) && !string.IsNullOrEmpty(SiteName))
             {
                 try
                 {
-                    string forumFolder = Path.Combine(_rootFolder, _siteName, _forumName);
+                    string forumFolder = Path.Combine(_rootFolder, SiteName, ForumName);
                     Directory.CreateDirectory(forumFolder);
                     string logFile = Path.Combine(forumFolder, "harvest.log");
                     File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
@@ -247,7 +288,7 @@ namespace AIToady.Harvester.ViewModels
         {
             if (thread != null)
             {
-                string threadFolder = System.IO.Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
+                string threadFolder = System.IO.Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
                 System.IO.Directory.CreateDirectory(threadFolder);
 
                 string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });

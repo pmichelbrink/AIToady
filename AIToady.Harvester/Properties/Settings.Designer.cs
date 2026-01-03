@@ -167,5 +167,65 @@ namespace AIToady.Harvester.Properties {
                 this["SkipExistingThreads"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SiteName {
+            get {
+                return ((string)(this["SiteName"]));
+            }
+            set {
+                this["SiteName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ForumName {
+            get {
+                return ((string)(this["ForumName"]));
+            }
+            set {
+                this["ForumName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string MessageElement {
+            get {
+                return ((string)(this["MessageElement"]));
+            }
+            set {
+                this["MessageElement"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ImageElement {
+            get {
+                return ((string)(this["ImageElement"]));
+            }
+            set {
+                this["ImageElement"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string AttachmentElement {
+            get {
+                return ((string)(this["AttachmentElement"]));
+            }
+            set {
+                this["AttachmentElement"] = value;
+            }
+        }
     }
 }

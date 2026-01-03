@@ -15,6 +15,7 @@ namespace AIToady.Harvester
         private MainViewModel _viewModel;
         private bool _isCapturingElement = false;
         private bool _isThreadElementCapture = false;
+        private bool _isMessageElementCapture = false;
 
         public MainWindow()
         {
@@ -35,7 +36,12 @@ namespace AIToady.Harvester
                 WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
                     if (_isCapturingElement) {
                         string result = args.TryGetWebMessageAsString();
-                        _viewModel.HandleElementCapture(result, _isThreadElementCapture);
+                        if (_isThreadElementCapture)
+                            _viewModel.ThreadElement = result;
+                        else if (_isMessageElementCapture)
+                            _viewModel.MessageElement = result;
+                        else
+                            _viewModel.NextElement = result;
                         _isCapturingElement = false;
                     }
                 };
@@ -284,6 +290,21 @@ namespace AIToady.Harvester
         private void ThreadElementTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             _isCapturingElement = false;
+            _isThreadElementCapture = false;
+            WebView.ExecuteScriptAsync("window.capturingElement = false;");
+        }
+
+        private void MessageElementTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            _isCapturingElement = true;
+            _isMessageElementCapture = true;
+            WebView.ExecuteScriptAsync("window.capturingElement = true;");
+        }
+
+        private void MessageElementTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            _isCapturingElement = false;
+            _isMessageElementCapture = false;
             WebView.ExecuteScriptAsync("window.capturingElement = false;");
         }
 
