@@ -155,5 +155,17 @@ namespace AIToady.Harvester.Properties {
                 this["EndTime"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SkipExistingThreads {
+            get {
+                return ((bool)(this["SkipExistingThreads"]));
+            }
+            set {
+                this["SkipExistingThreads"] = value;
+            }
+        }
     }
 }

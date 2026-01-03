@@ -10,165 +10,18 @@ namespace AIToady.Harvester.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
-        private ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
-        private int _forumPageNumber = 1;
-        private int _threadPageNumber = 1;
-        private int _threadsToSkip = 0;
-        private string _url = "akfiles.com";
-        private string _nextElement = ".pageNav-jump--next";
-        private string _threadElement = "";
-        private int _pageLoadDelay = 6;
-        private bool _isHarvesting = false;
-        private int _currentThreadIndex = 0;
-        private bool _isCapturingElement = false;
-        private List<string> _threadLinks = new List<string>();
-        int _threadImageCounter = 1;
-        string _forumName;
-        private string _threadName;
-        string _siteName = "The AK Files";
-        private Random _random = new Random();
-        private string _rootFolder = GetDriveWithMostFreeSpace();
-        private string _startTime = "09:00";
-        private string _endTime = "17:00";
-        private System.Timers.Timer _operatingHoursTimer;
-        private string _harvestingButtonText = "Start Harvesting";
-        private bool _stopAfterCurrentPage = false;
-        
-        private static string GetDriveWithMostFreeSpace()
-        {
-            return DriveInfo.GetDrives()
-                .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
-                .OrderByDescending(d => d.AvailableFreeSpace)
-                .FirstOrDefault()?.Name ?? "C:\\";
-        }
-        private int GetRandomizedDelay()
-        {
-            int delay = _random.Next(PageLoadDelay, PageLoadDelay * 3 + 1) * 1000;
-            return delay;
-        }
-        public string Url
-        {
-            get => _url;
-            set => SetProperty(ref _url, value);
-        }
-
-        public string NextElement
-        {
-            get => _nextElement;
-            set => SetProperty(ref _nextElement, value);
-        }
-
-        public string ThreadElement
-        {
-            get => _threadElement;
-            set => SetProperty(ref _threadElement, value);
-        }
-
-        public ObservableCollection<LogEntry> LogEntries => _logEntries;
-
-        public int ThreadsToSkip
-        {
-            get => _threadsToSkip;
-            set => SetProperty(ref _threadsToSkip, value);
-        }
-
-        public int PageLoadDelay
-        {
-            get => _pageLoadDelay;
-            set => SetProperty(ref _pageLoadDelay, value);
-        }
-
-        public string RootFolder
-        {
-            get => _rootFolder;
-            set => SetProperty(ref _rootFolder, value);
-        }
-
-        public string StartTime
-        {
-            get => _startTime;
-            set => SetProperty(ref _startTime, value);
-        }
-
-        public string EndTime
-        {
-            get => _endTime;
-            set => SetProperty(ref _endTime, value);
-        }
-
-        public string HarvestingButtonText
-        {
-            get => _harvestingButtonText;
-            set => SetProperty(ref _harvestingButtonText, value);
-        }
-
-        public bool IsHarvesting
-        {
-            get => _isHarvesting;
-            set => SetProperty(ref _isHarvesting, value);
-        }
-
-        public bool IsCapturingElement
-        {
-            get => _isCapturingElement;
-            set => SetProperty(ref _isCapturingElement, value);
-        }
-
-        public bool StopAfterCurrentPage
-        {
-            get => _stopAfterCurrentPage;
-            set => SetProperty(ref _stopAfterCurrentPage, value);
-        }
-
-        public List<string> ThreadLinks => _threadLinks;
-
-        public ICommand GoCommand { get; }
-        public ICommand NextCommand { get; }
-        public ICommand LoadThreadsCommand { get; }
-        public ICommand StartHarvestingCommand { get; }
-
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
         public event Func<string, string, Task> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
 
+
         public MainViewModel()
         {
-            LoadSettings();
-            GoCommand = new RelayCommand(ExecuteGo);
-            NextCommand = new RelayCommand(ExecuteNext);
-            //LoadThreadsCommand = new RelayCommand(ExecuteLoadThreads);
-            StartHarvestingCommand = new RelayCommand(ExecuteStartHarvesting, () => !_isHarvesting || _threadLinks.Count > 0);
-            
-            InitializeOperatingHoursTimer();
         }
 
-        private void LoadSettings()
-        {
-            Url = string.IsNullOrEmpty(Properties.Settings.Default.Url) ? "akfiles.com" : Properties.Settings.Default.Url;
-            NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
-            ThreadElement = Properties.Settings.Default.ThreadElement;
-            ThreadsToSkip = Properties.Settings.Default.ThreadsToSkip;
-            PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 6 : Properties.Settings.Default.PageLoadDelay;
-            RootFolder = string.IsNullOrEmpty(Properties.Settings.Default.RootFolder) ? GetDriveWithMostFreeSpace() : Properties.Settings.Default.RootFolder;
-            StartTime = string.IsNullOrEmpty(Properties.Settings.Default.StartTime) ? "09:00" : Properties.Settings.Default.StartTime;
-            EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "17:00" : Properties.Settings.Default.EndTime;
-        }
 
-        public void SaveSettings()
-        {
-            Properties.Settings.Default.Url = Url;
-            Properties.Settings.Default.NextElement = NextElement;
-            Properties.Settings.Default.ThreadElement = ThreadElement;
-            Properties.Settings.Default.ThreadsToSkip = ThreadsToSkip;
-            Properties.Settings.Default.PageLoadDelay = PageLoadDelay;
-            Properties.Settings.Default.RootFolder = RootFolder;
-            Properties.Settings.Default.StartTime = StartTime;
-            Properties.Settings.Default.EndTime = EndTime;
-            Properties.Settings.Default.Save();
-        }
-
-        private void ExecuteGo()
+        protected override void ExecuteGo()
         {
             if (!string.IsNullOrEmpty(Url))
             {
@@ -181,42 +34,7 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        private void InitializeOperatingHoursTimer()
-        {
-            _operatingHoursTimer = new System.Timers.Timer(60000); // Check every minute
-            _operatingHoursTimer.Elapsed += (s, e) => CheckOperatingHours();
-            _operatingHoursTimer.Start();
-        }
-
-        private bool IsWithinOperatingHours()
-        {
-            if (!TimeSpan.TryParse(StartTime, out var startTime) || !TimeSpan.TryParse(EndTime, out var endTime))
-                return true;
-
-            var currentTime = DateTime.Now.TimeOfDay;
-            return currentTime >= startTime && currentTime <= endTime;
-        }
-
-        private void CheckOperatingHours()
-        {
-            if (_isHarvesting && !IsWithinOperatingHours())
-            {
-                _isHarvesting = false;
-                HarvestingButtonText = "Sleeping";
-            }
-            else if (!_isHarvesting && IsWithinOperatingHours() && HarvestingButtonText == "Sleeping" && _threadLinks.Count > 0)
-            {
-                HarvestingButtonText = "Start Harvesting";
-                // Auto-resume harvesting
-                Application.Current.Dispatcher.Invoke(() => ExecuteStartHarvesting());
-            }
-            else if (HarvestingButtonText == "Sleeping" && IsWithinOperatingHours())
-            {
-                HarvestingButtonText = "Start Harvesting";
-            }
-        }
-
-        private async void ExecuteNext()
+        protected async void ExecuteNext()
         {
             if (!string.IsNullOrEmpty(NextElement))
             {
@@ -262,26 +80,7 @@ namespace AIToady.Harvester.ViewModels
             return match.Success ? int.Parse(match.Groups[1].Value) : 1;
         }
 
-        private void AddLogEntry(string message)
-        {
-            Application.Current.Dispatcher.Invoke(() => 
-                _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
-            
-            // Write to log file if forum folder exists
-            if (!string.IsNullOrEmpty(_forumName) && !string.IsNullOrEmpty(_siteName))
-            {
-                try
-                {
-                    string forumFolder = Path.Combine(_rootFolder, _siteName, _forumName);
-                    Directory.CreateDirectory(forumFolder);
-                    string logFile = Path.Combine(forumFolder, "harvest.log");
-                    File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
-                }
-                catch { }
-            }
-        }
-
-        private async void ExecuteStartHarvesting()
+        protected override async void ExecuteStartHarvesting()
         {
             if (_isHarvesting)
             {
@@ -379,19 +178,6 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        private async Task WriteThreadInfo(ForumThread thread)
-        {
-            if (thread != null)
-            {
-                string threadFolder = System.IO.Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
-                System.IO.Directory.CreateDirectory(threadFolder);
-
-                string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
-                string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
-                await System.IO.File.WriteAllTextAsync(fileName, json);
-            }
-        }
-
         private async Task LoadForumPage()
         {
             //Load the forum page (a thread page is currently loaded) and
@@ -434,6 +220,13 @@ namespace AIToady.Harvester.ViewModels
 
             _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
             string threadFolder = Path.Combine(_rootFolder, _siteName, _forumName, _threadName);
+            
+            // Check if thread folder exists and skip if SkipExistingThreads is true
+            if (SkipExistingThreads && Directory.Exists(threadFolder))
+            {
+                AddLogEntry($"Skipping existing thread: {_threadName}");
+                return null;
+            }
             string imagesFolder = Path.Combine(threadFolder, "Images");
             
             // Loop through all pages in the thread
@@ -523,27 +316,6 @@ namespace AIToady.Harvester.ViewModels
             thread.Messages.AddRange(pageMessages);
         }
 
-        private static string GetFileNameFromUrl(int fileIndex, string attachmentUrl)
-        {
-            // Extract filename from URL path
-            string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
-            if (string.IsNullOrEmpty(fileName))
-            {
-                fileName = $"attachment_{fileIndex + 1}.jpg";
-            }
-            else
-            {
-                fileName = fileName.Replace("-", ".");
-                // Remove everything after the second dot (e.g. "20250413_195050.jpg.731026" -> "20250413_195050.jpg")
-                var parts = fileName.Split('.');
-                if (parts.Length > 1 && int.TryParse(parts[parts.Length - 1], out _))
-                {
-                    fileName = string.Join(".", parts.Take(parts.Length - 1));
-                }
-            }
-
-            return fileName;
-        }
 
         private async Task<List<ForumMessage>> HarvestPage()
         {
@@ -613,26 +385,6 @@ namespace AIToady.Harvester.ViewModels
             }
             
             return new List<ForumMessage>();
-        }
-
-        public void HandleElementCapture(string result, bool isThreadElement)
-        {
-            if (isThreadElement && result.Contains("."))
-            {
-                string[] parts = result.Split('.');
-                result = parts[parts.Length - 1];
-                ThreadElement = result;
-            }
-            else if (!isThreadElement)
-            {
-                NextElement = result;
-            }
-        }
-
-        public void Dispose()
-        {
-            _operatingHoursTimer?.Stop();
-            _operatingHoursTimer?.Dispose();
         }
     }
 }

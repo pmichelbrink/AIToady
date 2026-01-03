@@ -23,12 +23,13 @@ namespace AIToady.Harvester
             DataContext = _viewModel;
             
             LoadWindowSettings();
-            
+
             _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
-            
+
+
             WebView.NavigationCompleted += WebView_NavigationCompleted;
             WebView.CoreWebView2InitializationCompleted += (s, e) => {
                 WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
