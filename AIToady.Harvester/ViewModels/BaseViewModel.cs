@@ -42,10 +42,12 @@ namespace AIToady.Harvester.ViewModels
         protected System.Timers.Timer _operatingHoursTimer;
         public event Func<string, string, Task> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
+        public event Action<string> NavigateRequested;
+        public event Func<string, Task<string>> ExecuteScriptRequested;
 
-        protected virtual void ExecuteStartHarvesting() { }
-        protected virtual void ExecuteGo() { }
-        protected virtual void ExecuteNext() { }
+        protected virtual async Task<ForumThread> HarvestThread(string threadUrl) { return new ForumThread(); }
+        protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
+        protected async Task<string> InvokeExecuteScriptRequested(string script) => await ExecuteScriptRequested?.Invoke(script);
         protected static string GetDriveWithMostFreeSpace()
         {
             return DriveInfo.GetDrives()
@@ -182,6 +184,191 @@ namespace AIToady.Harvester.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+
+        public async void ExecuteStartHarvesting()
+        {
+            if (_isHarvesting)
+            {
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return;
+            }
+
+            if (!IsWithinOperatingHours())
+            {
+                MessageBox.Show("Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                HarvestingButtonText = "Sleeping";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
+            {
+                MessageBox.Show("Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
+            {
+                MessageBox.Show("Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return;
+            }
+
+            _isHarvesting = true;
+            HarvestingButtonText = "Stop Harvesting";
+            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+
+            bool hasNextForumPage = true;
+            while (_isHarvesting && hasNextForumPage)
+            {
+                await ExecuteLoadThreads();
+
+                // Check operating hours after each page
+                if (!IsWithinOperatingHours())
+                {
+                    _isHarvesting = false;
+                    HarvestingButtonText = "Sleeping";
+                    break;
+                }
+
+                // Process all threads on current page
+                for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
+                {
+                    AddLogEntry(_threadLinks[i]);
+                    var thread = await HarvestThread(_threadLinks[i]);
+                    await WriteThreadInfo(thread);
+
+                    if (!_isHarvesting)
+                    {
+                        InvokeNavigateRequested(Url);
+                        return;
+                    }
+                }
+
+                ThreadsToSkip = 0;
+
+                await LoadForumPage();
+
+                // Check if Next element exists and click it, if it 
+                // doesn't exist, we are on the last page
+                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
+                string nextResult = await InvokeExecuteScriptRequested(nextScript);
+                nextResult = JsonSerializer.Deserialize<string>(nextResult);
+
+                if (nextResult == "found")
+                {
+                    if (_stopAfterCurrentPage)
+                    {
+                        hasNextForumPage = false;
+                        AddLogEntry("Stopping after current page as requested");
+                    }
+                    else
+                    {
+                        //Load the next page by clicking the Next element
+                        await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
+
+                        //Wait for navigation to complete
+                        await Task.Delay(GetRandomizedDelay());
+
+                        Url = await InvokeExecuteScriptRequested("window.location.href");
+                        Url = JsonSerializer.Deserialize<string>(Url);
+                        AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                        SaveSettings();
+                    }
+                }
+                else
+                {
+                    hasNextForumPage = false;
+                }
+            }
+
+            if (_isHarvesting)
+            {
+                MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+            }
+        }
+        public void ExecuteGo()
+        {
+            if (!string.IsNullOrEmpty(Url))
+            {
+                string url = Url.Trim();
+                if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+                {
+                    url = "https://" + url;
+                }
+                NavigateRequested?.Invoke(url);
+            }
+        }
+
+        public async void ExecuteNext()
+        {
+            if (!string.IsNullOrEmpty(NextElement))
+            {
+                await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+            }
+        }
+
+        public async Task ExecuteLoadThreads()
+        {
+            try
+            {
+                // Ensure WebView2 is initialized before executing scripts
+                if (ExecuteScriptRequested == null)
+                {
+                    AddLogEntry("WebView2 not ready. Please navigate to a page first.");
+                    return;
+                }
+
+                string className = ThreadElement.Trim();
+                if (!string.IsNullOrEmpty(className))
+                {
+                    string script = $@"
+                        let linkSet = new Set();
+                        let divs = document.querySelectorAll('.{className.TrimStart('.')}');
+                        divs.forEach(div => {{
+                            let anchors = div.querySelectorAll('a');
+                            anchors.forEach(a => {{
+                                if (a.href && a.href.includes('/threads/')) linkSet.add(a.href);
+                            }});
+                        }});
+                        JSON.stringify(Array.from(linkSet));
+                    ";
+
+                    string result = await ExecuteScriptRequested?.Invoke(script);
+                    result = JsonSerializer.Deserialize<string>(result);
+                    var links = JsonSerializer.Deserialize<string[]>(result);
+                    _threadLinks.Clear();
+                    _threadLinks.AddRange(links);
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLogEntry($"Error loading threads: {ex.Message}");
+            }
+        }
+        public async Task LoadForumPage()
+        {
+            //Load the forum page (a thread page is currently loaded) and
+            //wait for navigation to complete by checking URL
+            InvokeNavigateRequested(Url);
+            string currentUrl;
+            do
+            {
+                await Task.Delay(500);
+                currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
+                currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+            } while (currentUrl != Url && _isHarvesting);
+        }
+        public int GetPageNumberFromUrl(string url)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(url, @"/page-(\d+)");
+            return match.Success ? int.Parse(match.Groups[1].Value) : 1;
+        }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
             string imagesFolder = Path.Combine(threadFolder, "Images");
@@ -197,10 +384,19 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
-                        // Skip tinypic.com URLs
                         if (imageUrl.Contains("tinypic.com"))
                         {
                             AddLogEntry($"Skipping tinypic.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("postimg.org"))
+                        {
+                            AddLogEntry($"Skipping postimg.org image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("photobucket.com"))
+                        {
+                            AddLogEntry($"Skipping photobucket.com image {imageUrl}");
                             continue;
                         }
 
@@ -215,6 +411,10 @@ namespace AIToady.Harvester.ViewModels
                         // Clean imgur URLs by removing query parameters
                         if (imageUrl.Contains("imgur.com") && imageUrl.Contains("?"))
                             imageUrl = imageUrl.Split('?')[0];
+
+                        // Clean Google Photos URLs by removing parameters
+                        if (imageUrl.Contains("googleusercontent.com") && imageUrl.Contains("="))
+                            imageUrl = imageUrl.Split('=')[0];
 
                         string fileName = await GetFileNameFromUrl(i, imageUrl);
 
@@ -405,7 +605,10 @@ namespace AIToady.Harvester.ViewModels
             }
         }
         public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
-        {
+        {                        // Generate random filename for Google Photos URLs
+            if (attachmentUrl.Contains("googleusercontent.com"))
+                return $"google_photo_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+
             // Extract filename from URL path
             string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
             if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))

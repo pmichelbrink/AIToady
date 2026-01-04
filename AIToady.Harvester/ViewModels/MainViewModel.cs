@@ -1,222 +1,24 @@
 using AIToady.Harvester.Models;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Input;
-using System.Timers;
 
 namespace AIToady.Harvester.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
-        public event Action<string> NavigateRequested;
-        public event Func<string, Task<string>> ExecuteScriptRequested;
-        public MainViewModel()
-        {
-        }
-
-
-        protected override void ExecuteGo()
-        {
-            if (!string.IsNullOrEmpty(Url))
-            {
-                string url = Url.Trim();
-                if (!url.StartsWith("http://") && !url.StartsWith("https://"))
-                {
-                    url = "https://" + url;
-                }
-                NavigateRequested?.Invoke(url);
-            }
-        }
-
-        protected async void ExecuteNext()
-        {
-            if (!string.IsNullOrEmpty(NextElement))
-            {
-                await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-            }
-        }
-
-        private async Task ExecuteLoadThreads()
-        {
-            try
-            {
-                // Ensure WebView2 is initialized before executing scripts
-                if (ExecuteScriptRequested == null)
-                {
-                    AddLogEntry("WebView2 not ready. Please navigate to a page first.");
-                    return;
-                }
-
-                string className = ThreadElement.Trim();
-                if (!string.IsNullOrEmpty(className))
-                {
-                    string script = $@"
-                        let linkSet = new Set();
-                        let divs = document.querySelectorAll('.{className.TrimStart('.')}');
-                        divs.forEach(div => {{
-                            let anchors = div.querySelectorAll('a');
-                            anchors.forEach(a => {{
-                                if (a.href && a.href.includes('/threads/')) linkSet.add(a.href);
-                            }});
-                        }});
-                        JSON.stringify(Array.from(linkSet));
-                    ";
-                    
-                    string result = await ExecuteScriptRequested?.Invoke(script);
-                    result = JsonSerializer.Deserialize<string>(result);
-                    var links = JsonSerializer.Deserialize<string[]>(result);
-                    _threadLinks.Clear();
-                    _threadLinks.AddRange(links);
-                }
-            }
-            catch (Exception ex)
-            {
-                AddLogEntry($"Error loading threads: {ex.Message}");
-            }
-        }
-
-        private int GetPageNumberFromUrl(string url)
-        {
-            var match = System.Text.RegularExpressions.Regex.Match(url, @"/page-(\d+)");
-            return match.Success ? int.Parse(match.Groups[1].Value) : 1;
-        }
-
-        protected override async void ExecuteStartHarvesting()
-        {
-            if (_isHarvesting)
-            {
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-                return;
-            }
-
-            if (!IsWithinOperatingHours())
-            {
-                MessageBox.Show("Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-                HarvestingButtonText = "Sleeping";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
-            {
-                MessageBox.Show("Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
-            {
-                MessageBox.Show("Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-                return;
-            }
-
-            _isHarvesting = true;
-            HarvestingButtonText = "Stop Harvesting";
-            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-
-            bool hasNextForumPage = true;
-            while (_isHarvesting && hasNextForumPage)
-            {
-                await ExecuteLoadThreads();
-
-                // Check operating hours after each page
-                if (!IsWithinOperatingHours())
-                {
-                    _isHarvesting = false;
-                    HarvestingButtonText = "Sleeping";
-                    break;
-                }
-
-                // Process all threads on current page
-                for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
-                {
-                    AddLogEntry(_threadLinks[i]);
-                    var thread = await HarvestThread(_threadLinks[i]);
-                    await WriteThreadInfo(thread);
-                    
-                    if (!_isHarvesting)
-                    {
-                        NavigateRequested?.Invoke(Url);
-                        return;
-                    }
-                }
-
-                ThreadsToSkip = 0;
-
-                await LoadForumPage();
-
-                // Check if Next element exists and click it, if it 
-                // doesn't exist, we are on the last page
-                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                string nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                nextResult = JsonSerializer.Deserialize<string>(nextResult);
-
-                if (nextResult == "found")
-                {
-                    if (_stopAfterCurrentPage)
-                    {
-                        hasNextForumPage = false;
-                        AddLogEntry("Stopping after current page as requested");
-                    }
-                    else
-                    {
-                        //Load the next page by clicking the Next element
-                        await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
-
-                        //Wait for navigation to complete
-                        await Task.Delay(GetRandomizedDelay());
-
-                        Url = await ExecuteScriptRequested?.Invoke("window.location.href");
-                        Url = JsonSerializer.Deserialize<string>(Url);
-                        AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-                        SaveSettings();
-                    }
-                }
-                else
-                {
-                    hasNextForumPage = false;
-                }
-            }
-
-            if (_isHarvesting)
-            {
-                MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-            }
-        }
-
-        private async Task LoadForumPage()
-        {
-            //Load the forum page (a thread page is currently loaded) and
-            //wait for navigation to complete by checking URL
-            NavigateRequested?.Invoke(Url);
-            string currentUrl;
-            do
-            {
-                await Task.Delay(500);
-                currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
-                currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-            } while (currentUrl != Url && _isHarvesting);
-        }
-
-        private async Task<ForumThread> HarvestThread(string threadUrl)
+        protected override async Task<ForumThread> HarvestThread(string threadUrl)
         {
             _threadImageCounter = 1;
             _threadPageNumber = 1;
-            NavigateRequested?.Invoke(threadUrl);
+            InvokeNavigateRequested(threadUrl);
             await Task.Delay(GetRandomizedDelay());
             
             var thread = new ForumThread();
             
             // Get thread name from page title
             string titleScript = "document.title";
-            string titleResult = await ExecuteScriptRequested?.Invoke(titleScript);
+            string titleResult = await InvokeExecuteScriptRequested(titleScript);
             thread.ThreadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
 
             _threadName = thread.ThreadName;
@@ -273,7 +75,7 @@ namespace AIToady.Harvester.ViewModels
                     string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                     try
                     {
-                        nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                        nextResult = await InvokeExecuteScriptRequested(nextScript);
                         nextResult = JsonSerializer.Deserialize<string>(nextResult);
                         if (nextResult == "found")
                             nextPageExists = true;
@@ -284,7 +86,7 @@ namespace AIToady.Harvester.ViewModels
                         await Task.Delay(2000);
                         try
                         {
-                            nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                            nextResult = await InvokeExecuteScriptRequested(nextScript);
                             nextResult = JsonSerializer.Deserialize<string>(nextResult);
                         }
                         catch
@@ -300,7 +102,7 @@ namespace AIToady.Harvester.ViewModels
                     _threadPageNumber++;
                     try
                     {
-                        await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
+                        await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
                         await Task.Delay(GetRandomizedDelay());
                     }
                     catch (TaskCanceledException)
@@ -323,7 +125,7 @@ namespace AIToady.Harvester.ViewModels
             try
             {
                 string script = "document.querySelector('.pageNav-jump--next[aria-disabled=\"false\"]') ? 'found' : 'not_found'";
-                string result = await ExecuteScriptRequested?.Invoke(script);
+                string result = await InvokeExecuteScriptRequested(script);
                 result = JsonSerializer.Deserialize<string>(result);
                 return result == "found";
             }
@@ -387,7 +189,7 @@ namespace AIToady.Harvester.ViewModels
                 JSON.stringify(messages);
             ";
             
-            string result = await ExecuteScriptRequested?.Invoke(extractScript);
+            string result = await InvokeExecuteScriptRequested(extractScript);
             if (!string.IsNullOrEmpty(result))
             {
                 try
@@ -485,7 +287,7 @@ namespace AIToady.Harvester.ViewModels
             
             try
             {
-                string result = await ExecuteScriptRequested?.Invoke(extractScript);
+                string result = await InvokeExecuteScriptRequested(extractScript);
                 if (!string.IsNullOrEmpty(result))
                 {
                     result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
