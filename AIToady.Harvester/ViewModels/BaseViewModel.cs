@@ -288,6 +288,13 @@ namespace AIToady.Harvester.ViewModels
         {
             if (thread != null)
             {
+                // Strip newlines and normalize spaces in message content
+                foreach (var message in thread.Messages)
+                {
+                    message.Message = message.Message?.Replace("\n", " ").Replace("\r", " ");
+                    message.Message = System.Text.RegularExpressions.Regex.Replace(message.Message ?? "", @"\s+", " ");
+                }
+                
                 string threadFolder = System.IO.Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
                 System.IO.Directory.CreateDirectory(threadFolder);
 

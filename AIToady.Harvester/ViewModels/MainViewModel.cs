@@ -57,15 +57,15 @@ namespace AIToady.Harvester.ViewModels
                 if (!string.IsNullOrEmpty(className))
                 {
                     string script = $@"
-                        let links = [];
+                        let linkSet = new Set();
                         let divs = document.querySelectorAll('.{className.TrimStart('.')}');
                         divs.forEach(div => {{
                             let anchors = div.querySelectorAll('a');
                             anchors.forEach(a => {{
-                                if (a.href && a.href.includes('/threads/')) links.push(a.href);
+                                if (a.href && a.href.includes('/threads/')) linkSet.add(a.href);
                             }});
                         }});
-                        JSON.stringify(links);
+                        JSON.stringify(Array.from(linkSet));
                     ";
                     
                     string result = await ExecuteScriptRequested?.Invoke(script);
@@ -264,31 +264,42 @@ namespace AIToady.Harvester.ViewModels
 
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
-                // Check if NextElement exists and click it
-                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                string nextResult = null;
-                try
+                bool nextPageExists = false;
+
+                if (threadUrl.Contains("akforum.net"))
                 {
-                    nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
-                    nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                    nextPageExists = await CheckAKForumNextPageExists();
                 }
-                catch (TaskCanceledException)
+                else
                 {
-                    AddLogEntry("Script execution timeout, retrying...");
-                    await Task.Delay(2000);
+                    // Check if NextElement exists and click it
+                    string nextResult = null;
+                    string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
                     try
                     {
                         nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
                         nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                        if (nextResult == "found")
+                            nextPageExists = true;
                     }
-                    catch
+                    catch (TaskCanceledException)
                     {
-                        AddLogEntry("Failed to check next page, assuming no more pages");
-                        nextResult = "not_found";
+                        AddLogEntry("Script execution timeout, retrying...");
+                        await Task.Delay(2000);
+                        try
+                        {
+                            nextResult = await ExecuteScriptRequested?.Invoke(nextScript);
+                            nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                        }
+                        catch
+                        {
+                            AddLogEntry("Failed to check next page, assuming no more pages");
+                            nextResult = "not_found";
+                        }
                     }
                 }
 
-                if (nextResult == "found")
+                if (nextPageExists)
                 {
                     _threadPageNumber++;
                     try
@@ -311,8 +322,27 @@ namespace AIToady.Harvester.ViewModels
             return thread;
         }
 
+        private async Task<bool> CheckAKForumNextPageExists()
+        {
+            try
+            {
+                string script = "document.querySelector('.pageNav-jump--next[aria-disabled=\"false\"]') ? 'found' : 'not_found'";
+                string result = await ExecuteScriptRequested?.Invoke(script);
+                result = JsonSerializer.Deserialize<string>(result);
+                return result == "found";
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
+            // Store current URL to return to after extraction
+            string currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
+            currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+            
             string imagesFolder = Path.Combine(threadFolder, "Images");
             string attachmentsFolder = Path.Combine(threadFolder, "Attachments");
             
@@ -373,6 +403,10 @@ namespace AIToady.Harvester.ViewModels
                 }
                 message.Attachments = attachmentNames;
             }
+
+            // Return to the original page after extraction
+            NavigateRequested?.Invoke(currentUrl);
+            await Task.Delay(1000); // Wait for navigation to complete
 
             thread.Messages.AddRange(pageMessages);
         }
@@ -454,7 +488,7 @@ namespace AIToady.Harvester.ViewModels
             string extractScript = @"
                 let messages = [];
                 document.querySelectorAll('.js-quickEditTarget.message-cell-content-wrapper').forEach(messageDiv => {
-                    let userElement = messageDiv.querySelector('.message-userContent .message-name a, .message-userContent .username a');
+                    let userElement = messageDiv.querySelector('.MessageCard__user-info__name');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt, time');
                     let images = [];
@@ -479,7 +513,7 @@ namespace AIToady.Harvester.ViewModels
                         
                         // Extract attachment files from attachmentList
                         let attachmentUrls = new Set();
-                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {
+                        messageDiv.querySelectorAll('.attachmentList .attachment .attachment-name a').forEach(element => {
                             let attachmentUrl = element.href;
                             if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
                                 attachmentUrls.add(attachmentUrl);
