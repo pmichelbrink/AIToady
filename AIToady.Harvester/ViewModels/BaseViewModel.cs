@@ -197,6 +197,21 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
+                        // Skip tinypic.com URLs
+                        if (imageUrl.Contains("tinypic.com"))
+                        {
+                            AddLogEntry($"Skipping tinypic.com image {imageUrl}");
+                            continue;
+                        }
+
+                        if (imageUrl.Contains("imgur.com/a/"))
+                        {
+                            AddLogEntry($"Processing imgur album: {imageUrl}");
+                            var albumImages = await ProcessImgurAlbum(imageUrl, imagesFolder);
+                            imageNames.AddRange(albumImages);
+                            continue;
+                        }
+
                         // Clean imgur URLs by removing query parameters
                         if (imageUrl.Contains("imgur.com") && imageUrl.Contains("?"))
                             imageUrl = imageUrl.Split('?')[0];
@@ -389,13 +404,13 @@ namespace AIToady.Harvester.ViewModels
                 await System.IO.File.WriteAllTextAsync(fileName, json);
             }
         }
-        public static async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
+        public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
         {
             // Extract filename from URL path
             string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
             if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
             {
-                // Try to detect file type from HTTP headers
+                AddLogEntry("Trying to detect file type from HTTP headers");
                 try
                 {
                     using (var httpClient = new System.Net.Http.HttpClient())
@@ -433,6 +448,61 @@ namespace AIToady.Harvester.ViewModels
             }
 
             return fileName;
+        }
+
+        private async Task<List<string>> ProcessImgurAlbum(string albumUrl, string imagesFolder)
+        {
+            var albumImages = new List<string>();
+            try
+            {
+                // Extract album ID from URL (e.g., https://imgur.com/a/nkoWLuL -> nkoWLuL)
+                string albumId = albumUrl.Split('/').Last();
+                
+                using (var httpClient = new System.Net.Http.HttpClient())
+                {
+                    // Use Imgur API to get album data
+                    string apiUrl = $"https://api.imgur.com/3/album/{albumId}";
+                    httpClient.DefaultRequestHeaders.Add("Authorization", "Client-ID 546c25a59c58ad7");
+                    
+                    var response = await httpClient.GetStringAsync(apiUrl);
+                    var json = System.Text.Json.JsonDocument.Parse(response);
+                    
+                    if (json.RootElement.GetProperty("success").GetBoolean())
+                    {
+                        var images = json.RootElement.GetProperty("data").GetProperty("images");
+                        int imageIndex = 0;
+                        
+                        foreach (var image in images.EnumerateArray())
+                        {
+                            try
+                            {
+                                string directImageUrl = image.GetProperty("link").GetString();
+                                string fileName = await GetFileNameFromUrl(imageIndex, directImageUrl);
+                                string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                                
+                                if (!System.IO.Directory.Exists(imagesFolder))
+                                    System.IO.Directory.CreateDirectory(imagesFolder);
+                                    
+                                await ExtractImageRequested?.Invoke(directImageUrl, imagePath);
+                                albumImages.Add(fileName);
+                                imageIndex++;
+                                _threadImageCounter++;
+                            }
+                            catch
+                            {
+                                AddLogEntry($"Failed to extract album image {imageIndex}");
+                            }
+                        }
+                    }
+                    
+                    AddLogEntry($"Processed imgur album: {albumImages.Count} images from {albumUrl}");
+                }
+            }
+            catch
+            {
+                AddLogEntry($"Failed to process imgur album {albumUrl}");
+            }
+            return albumImages;
         }
 
         public void HandleElementCapture(string result, bool isThreadElement)
