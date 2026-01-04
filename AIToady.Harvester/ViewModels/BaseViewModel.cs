@@ -196,12 +196,12 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string imageUrl = message.Images[i];
-                        
-                        // Clean image URLs by removing query parameters
-                        if (imageUrl.Contains("?"))
+
+                        // Clean imgur URLs by removing query parameters
+                        if (imageUrl.Contains("imgur.com") && imageUrl.Contains("?"))
                             imageUrl = imageUrl.Split('?')[0];
-                        
-                        string fileName = GetFileNameFromUrl(i, imageUrl);
+
+                        string fileName = await GetFileNameFromUrl(i, imageUrl);
 
                         if (!System.IO.Directory.Exists(imagesFolder))
                             System.IO.Directory.CreateDirectory(imagesFolder);
@@ -229,7 +229,7 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string attachmentUrl = message.Attachments[i];
-                        string fileName = GetFileNameFromUrl(i, attachmentUrl);
+                        string fileName = await GetFileNameFromUrl(i, attachmentUrl);
 
                         if (!System.IO.Directory.Exists(attachmentsFolder))
                             System.IO.Directory.CreateDirectory(attachmentsFolder);
@@ -389,13 +389,37 @@ namespace AIToady.Harvester.ViewModels
                 await System.IO.File.WriteAllTextAsync(fileName, json);
             }
         }
-        public static string GetFileNameFromUrl(int fileIndex, string attachmentUrl)
+        public static async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
         {
             // Extract filename from URL path
             string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
-            if (string.IsNullOrEmpty(fileName))
+            if (string.IsNullOrEmpty(fileName) || !fileName.Contains("."))
             {
-                fileName = $"attachment_{fileIndex + 1}.jpg";
+                // Try to detect file type from HTTP headers
+                try
+                {
+                    using (var httpClient = new System.Net.Http.HttpClient())
+                    {
+                        httpClient.Timeout = TimeSpan.FromSeconds(5);
+                        var response = await httpClient.SendAsync(new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, attachmentUrl));
+                        var contentType = response.Content.Headers.ContentType?.MediaType;
+                        
+                        string extension = contentType switch
+                        {
+                            "image/jpeg" => ".jpg",
+                            "image/png" => ".png",
+                            "image/gif" => ".gif",
+                            "image/webp" => ".webp",
+                            _ => ".jpg"
+                        };
+                        
+                        fileName = string.IsNullOrEmpty(fileName) ? $"image_{fileIndex + 1}{extension}" : $"{fileName}{extension}";
+                    }
+                }
+                catch
+                {
+                    fileName = $"image_{fileIndex + 1}.jpg";
+                }
             }
             else
             {
