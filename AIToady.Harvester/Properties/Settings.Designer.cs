@@ -227,5 +227,7 @@ namespace AIToady.Harvester.Properties {
                 this["AttachmentElement"] = value;
             }
         }
+
+        public bool HoursOfOperationEnabled { get; internal set; }
     }
 }

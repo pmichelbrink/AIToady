@@ -24,6 +24,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0"
                      Height="25"
@@ -48,19 +49,85 @@
                     Width="100"
                     Height="25"
                     Command="{Binding StartHarvestingCommand}" />
+            <GroupBox Grid.Column="4"
+                      Header="Hours of Operation"
+                      Margin="5,0"
+                      Height="58">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Content="Enabled"
+                              IsChecked="{Binding HoursOfOperationEnabled}"
+                              Margin="5, 10" />
+                    <Grid Grid.Column="1"
+                          Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                          
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0"
+                               Content="Start Time:"
+                               VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 x:Name="StartTimeTextBox"
+                                 Width="60"
+                                 Height="25"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding StartTime}"
+                                 Margin="0,0,2,0"
+                                 IsEnabled="{Binding HoursOfOperationEnabled}" />
+                        <Button Grid.Column="2"
+                                Content="🕐"
+                                Width="25"
+                                Height="25"
+                                Click="StartTimePickerButton_Click"
+                                Margin="0,0,10,0"
+                                IsEnabled="{Binding HoursOfOperationEnabled}" />
+                        <Label Grid.Column="3"
+                               Content="End Time:"
+                               VerticalAlignment="Center" />
+                        <TextBox Grid.Column="4"
+                                 x:Name="EndTimeTextBox"
+                                 Width="60"
+                                 Height="25"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding EndTime}"
+                                 Margin="0,0,2,0"
+                                 IsEnabled="{Binding HoursOfOperationEnabled}" />
+                        <Button Grid.Column="5"
+                                Content="🕐"
+                                Width="25"
+                                Height="25"
+                                Click="EndTimePickerButton_Click"
+                                Margin="0,0,10,0"
+                                IsEnabled="{Binding HoursOfOperationEnabled}" />
+                     
+                    </Grid>
+                </Grid>
+            </GroupBox>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="5">
+        <Grid Grid.Row="2"
+              Margin="5,-5,5,5">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -68,27 +135,37 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Hours of Operation:" VerticalAlignment="Center"/>
-            <Label Grid.Column="1" Content="Start Time:" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="2" x:Name="StartTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding StartTime}" Margin="0,0,2,0"/>
-            <Button Grid.Column="3" Content="🕐" Width="25" Height="25" Click="StartTimePickerButton_Click" Margin="0,0,10,0"/>
-            <Label Grid.Column="4" Content="End Time:" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="5" x:Name="EndTimeTextBox" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding EndTime}" Margin="0,0,2,0"/>
-            <Button Grid.Column="6" Content="🕐" Width="25" Height="25" Click="EndTimePickerButton_Click" Margin="0,0,10,0"/>
-            <Label Grid.Column="7" Content="Threads to Skip:" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="8" x:Name="ThreadsToSkipTextBox" Width="30" Height="25" VerticalContentAlignment="Center" Text="{Binding ThreadsToSkip, Mode=TwoWay}" PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput" Margin="0,0,10,0"/>
-            <Label Grid.Column="9" Content="Root Folder:" VerticalAlignment="Center"/>
-            <TextBox Grid.Column="10" Width="60" Height="25" VerticalContentAlignment="Center" Text="{Binding RootFolder}" Margin="0,0,5,0"/>
-            <Button Grid.Column="11"
+
+            <Label Grid.Column="6"
+                   Content="Threads to Skip:"
+                   VerticalAlignment="Center" />
+            <TextBox Grid.Column="7"
+                     x:Name="ThreadsToSkipTextBox"
+                     Width="30"
+                     Height="25"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding ThreadsToSkip, Mode=TwoWay}"
+                     PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput"
+                     Margin="0,0,10,0" />
+            <Label Grid.Column="8"
+                   Content="Root Folder:"
+                   VerticalAlignment="Center" />
+            <TextBox Grid.Column="9"
+                     Width="60"
+                     Height="25"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding RootFolder}"
+                     Margin="0,0,5,0" />
+            <Button Grid.Column="10"
                     Content="Browse"
                     Width="60"
                     Height="25"
                     Click="BrowseButton_Click" />
-            <Label Grid.Column="12"
+            <Label Grid.Column="11"
                    Margin="10,0,0,0"
                    Content="Page Load Delay (seconds):"
                    VerticalAlignment="Center" />
-            <TextBox Grid.Column="13"
+            <TextBox Grid.Column="12"
                      x:Name="PageLoadDelayTextBox"
                      Width="30"
                      Height="25"
@@ -96,8 +173,19 @@
                      Text="{Binding PageLoadDelay}"
                      PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput"
                      Margin="0,0,10,0" />
+
+            <CheckBox Grid.Column="13"
+                      Content="Stop After Current Page"
+                      IsChecked="{Binding StopAfterCurrentPage}"
+                      VerticalAlignment="Center" />
+            <CheckBox Grid.Column="14"
+                      Content="Skip Existing Threads"
+                      IsChecked="{Binding SkipExistingThreads}"
+                      VerticalAlignment="Center"
+                      Margin="10,0,0,0" />
         </Grid>
-        
+
+
         <Grid Grid.Row="3" Margin="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -151,15 +239,6 @@
                      GotFocus="ThreadElementTextBox_GotFocus"
                      LostFocus="ThreadElementTextBox_LostFocus"
                      Margin="0,0,10,0" />
-            <CheckBox Grid.Column="10"
-                      Content="Stop After Current Page"
-                      IsChecked="{Binding StopAfterCurrentPage}"
-                      VerticalAlignment="Center" />
-            <CheckBox Grid.Column="11"
-                      Content="Skip Existing Threads"
-                      IsChecked="{Binding SkipExistingThreads}"
-                      VerticalAlignment="Center"
-                      Margin="10,0,0,0" />
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="4" Margin="5"/>

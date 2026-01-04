@@ -12,10 +12,6 @@ namespace AIToady.Harvester.ViewModels
     {
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
-        public event Func<string, string, Task> ExtractImageRequested;
-        public event Func<string, string, Task> ExtractAttachmentRequested;
-
-
         public MainViewModel()
         {
         }
@@ -337,81 +333,6 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        private async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
-        {
-            // Store current URL to return to after extraction
-            string currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
-            currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-            
-            string imagesFolder = Path.Combine(threadFolder, "Images");
-            string attachmentsFolder = Path.Combine(threadFolder, "Attachments");
-            
-            foreach (var message in pageMessages)
-            {
-                // Process images
-                var imageNames = new List<string>();
-                for (int i = 0; i < message.Images.Count; i++)
-                {
-                    try
-                    {
-                        string imageUrl = message.Images[i];
-                        string fileName = GetFileNameFromUrl(i, imageUrl);
-
-                        if (!System.IO.Directory.Exists(imagesFolder))
-                            System.IO.Directory.CreateDirectory(imagesFolder);
-
-                        string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
-                        await ExtractImageRequested?.Invoke(imageUrl, imagePath);
-                        imageNames.Add(fileName);
-                        _threadImageCounter++;
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        AddLogEntry($"Image extraction timeout for image {i + 1}, skipping");
-                    }
-                    catch
-                    {
-                        AddLogEntry($"Failed to extract image {i + 1}, skipping");
-                    }
-                }
-                message.Images = imageNames;
-                
-                // Process attachments
-                var attachmentNames = new List<string>();
-                for (int i = 0; i < message.Attachments.Count; i++)
-                {
-                    try
-                    {
-                        string attachmentUrl = message.Attachments[i];
-                        string fileName = GetFileNameFromUrl(i, attachmentUrl);
-
-                        if (!System.IO.Directory.Exists(attachmentsFolder))
-                            System.IO.Directory.CreateDirectory(attachmentsFolder);
-
-                        string attachmentPath = System.IO.Path.Combine(attachmentsFolder, fileName);
-                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
-                        attachmentNames.Add(fileName);
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        AddLogEntry($"Attachment extraction timeout for attachment {i + 1}, skipping");
-                    }
-                    catch
-                    {
-                        AddLogEntry($"Failed to extract attachment {i + 1}, skipping");
-                    }
-                }
-                message.Attachments = attachmentNames;
-            }
-
-            // Return to the original page after extraction
-            NavigateRequested?.Invoke(currentUrl);
-            await Task.Delay(1000); // Wait for navigation to complete
-
-            thread.Messages.AddRange(pageMessages);
-        }
-
-
         private async Task<List<ForumMessage>> HarvestPage()
         {
             string messageSelector = string.IsNullOrEmpty(MessageElement) ? ".message-inner" : MessageElement;
@@ -562,18 +483,22 @@ namespace AIToady.Harvester.ViewModels
                 JSON.stringify(messages);
             ";
             
-            string result = await ExecuteScriptRequested?.Invoke(extractScript);
-            if (!string.IsNullOrEmpty(result))
+            try
             {
-                try
+                string result = await ExecuteScriptRequested?.Invoke(extractScript);
+                if (!string.IsNullOrEmpty(result))
                 {
                     result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
                     return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
                 }
-                catch
-                {
-                    return new List<ForumMessage>();
-                }
+            }
+            catch (TaskCanceledException)
+            {
+                AddLogEntry("Script execution timeout in HarvestAKForumPage, returning empty list");
+            }
+            catch
+            {
+                // Silent catch for other exceptions
             }
             
             return new List<ForumMessage>();

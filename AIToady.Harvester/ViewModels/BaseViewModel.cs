@@ -31,6 +31,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _harvestingButtonText = "Start Harvesting";
         protected bool _stopAfterCurrentPage = false;
         protected bool _skipExistingThreads = true;
+        protected bool _hoursOfOperationEnabled = true;
         protected List<string> _threadLinks = new List<string>();
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -39,6 +40,8 @@ namespace AIToady.Harvester.ViewModels
         protected int _threadImageCounter = 1;
         protected string _threadName;
         protected System.Timers.Timer _operatingHoursTimer;
+        public event Func<string, string, Task> ExtractImageRequested;
+        public event Func<string, string, Task> ExtractAttachmentRequested;
 
         protected virtual void ExecuteStartHarvesting() { }
         protected virtual void ExecuteGo() { }
@@ -159,6 +162,12 @@ namespace AIToady.Harvester.ViewModels
             set => SetProperty(ref _skipExistingThreads, value);
         }
 
+        public bool HoursOfOperationEnabled
+        {
+            get => _hoursOfOperationEnabled;
+            set => SetProperty(ref _hoursOfOperationEnabled, value);
+        }
+
         public List<string> ThreadLinks => _threadLinks;
 
         public ICommand GoCommand { get; protected set; }
@@ -172,6 +181,73 @@ namespace AIToady.Harvester.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
+        {
+            string imagesFolder = Path.Combine(threadFolder, "Images");
+            string attachmentsFolder = Path.Combine(threadFolder, "Attachments");
+
+            foreach (var message in pageMessages)
+            {
+                // Process images
+                var imageNames = new List<string>();
+                for (int i = 0; i < message.Images.Count; i++)
+                {
+                    try
+                    {
+                        string imageUrl = message.Images[i];
+                        string fileName = GetFileNameFromUrl(i, imageUrl);
+
+                        if (!System.IO.Directory.Exists(imagesFolder))
+                            System.IO.Directory.CreateDirectory(imagesFolder);
+
+                        string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                        await ExtractImageRequested?.Invoke(imageUrl, imagePath);
+                        imageNames.Add(fileName);
+                        _threadImageCounter++;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry($"Image extraction timeout for image {i + 1}, skipping");
+                    }
+                    catch
+                    {
+                        AddLogEntry($"Failed to extract image {i + 1}, skipping");
+                    }
+                }
+                message.Images = imageNames;
+
+                // Process attachments
+                var attachmentNames = new List<string>();
+                for (int i = 0; i < message.Attachments.Count; i++)
+                {
+                    try
+                    {
+                        string attachmentUrl = message.Attachments[i];
+                        string fileName = GetFileNameFromUrl(i, attachmentUrl);
+
+                        if (!System.IO.Directory.Exists(attachmentsFolder))
+                            System.IO.Directory.CreateDirectory(attachmentsFolder);
+
+                        string attachmentPath = System.IO.Path.Combine(attachmentsFolder, fileName);
+                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
+                        attachmentNames.Add(fileName);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry($"Attachment extraction timeout for attachment {i + 1}, skipping");
+                    }
+                    catch
+                    {
+                        AddLogEntry($"Failed to extract attachment {i + 1}, skipping");
+                    }
+                }
+                message.Attachments = attachmentNames;
+            }
+
+            thread.Messages.AddRange(pageMessages);
+        }
+
 
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
@@ -212,6 +288,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.MessageElement = MessageElement;
             Properties.Settings.Default.ImageElement = ImageElement;
             Properties.Settings.Default.AttachmentElement = AttachmentElement;
+            Properties.Settings.Default.HoursOfOperationEnabled = HoursOfOperationEnabled;
             Properties.Settings.Default.Save();
         }
         public void LoadSettings()
@@ -230,6 +307,7 @@ namespace AIToady.Harvester.ViewModels
             MessageElement = Properties.Settings.Default.MessageElement ?? "";
             ImageElement = Properties.Settings.Default.ImageElement ?? "";
             AttachmentElement = Properties.Settings.Default.AttachmentElement ?? "";
+            HoursOfOperationEnabled = Properties.Settings.Default.HoursOfOperationEnabled;
         }
         public void InitializeOperatingHoursTimer()
         {
@@ -240,6 +318,9 @@ namespace AIToady.Harvester.ViewModels
 
         public bool IsWithinOperatingHours()
         {
+            if (!HoursOfOperationEnabled)
+                return true;
+                
             if (!TimeSpan.TryParse(StartTime, out var startTime) || !TimeSpan.TryParse(EndTime, out var endTime))
                 return true;
 
