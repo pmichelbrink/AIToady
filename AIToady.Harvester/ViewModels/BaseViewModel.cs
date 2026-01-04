@@ -196,6 +196,11 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string imageUrl = message.Images[i];
+                        
+                        // Clean image URLs by removing query parameters
+                        if (imageUrl.Contains("?"))
+                            imageUrl = imageUrl.Split('?')[0];
+                        
                         string fileName = GetFileNameFromUrl(i, imageUrl);
 
                         if (!System.IO.Directory.Exists(imagesFolder))
