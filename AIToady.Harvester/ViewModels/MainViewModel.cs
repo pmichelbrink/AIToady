@@ -499,15 +499,23 @@ namespace AIToady.Harvester.ViewModels
                         messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
                             let imageUrl = img.getAttribute('data-url') || img.getAttribute('data-src') || img.src;
                             if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
-                                images.push(imageUrl);
+                                // Remove query parameters to get clean image URL
+                                imageUrl = imageUrl.split('?')[0];
+                                if (imageUrl && !images.includes(imageUrl)) {
+                                    images.push(imageUrl);
+                                }
                             }
                         });
                         
                         // Extract images from lbContainer elements
                         messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
                             let imageUrl = zoomer.getAttribute('data-src');
-                            if (imageUrl && !images.includes(imageUrl)) {
-                                images.push(imageUrl);
+                            if (imageUrl) {
+                                // Remove query parameters to get clean image URL
+                                imageUrl = imageUrl.split('?')[0];
+                                if (imageUrl && !images.includes(imageUrl)) {
+                                    images.push(imageUrl);
+                                }
                             }
                         });
                         
