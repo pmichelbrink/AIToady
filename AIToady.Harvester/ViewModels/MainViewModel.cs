@@ -487,7 +487,7 @@ namespace AIToady.Harvester.ViewModels
         {
             string extractScript = @"
                 let messages = [];
-                document.querySelectorAll('.js-quickEditTarget.message-cell-content-wrapper').forEach(messageDiv => {
+                document.querySelectorAll('.MessageCard__container').forEach(messageDiv => {
                     let userElement = messageDiv.querySelector('.MessageCard__user-info__name');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt, time');
