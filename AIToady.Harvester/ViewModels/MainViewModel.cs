@@ -70,31 +70,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    // Check if NextElement exists and click it
-                    string nextResult = null;
-                    string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                    try
-                    {
-                        nextResult = await InvokeExecuteScriptRequested(nextScript);
-                        nextResult = JsonSerializer.Deserialize<string>(nextResult);
-                        if (nextResult == "found")
-                            nextPageExists = true;
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        AddLogEntry("Script execution timeout, retrying...");
-                        await Task.Delay(2000);
-                        try
-                        {
-                            nextResult = await InvokeExecuteScriptRequested(nextScript);
-                            nextResult = JsonSerializer.Deserialize<string>(nextResult);
-                        }
-                        catch
-                        {
-                            AddLogEntry("Failed to check next page, assuming no more pages");
-                            nextResult = "not_found";
-                        }
-                    }
+                    nextPageExists = await CheckIfNextPageExists();
                 }
 
                 if (nextPageExists)
@@ -146,6 +122,37 @@ namespace AIToady.Harvester.ViewModels
                 bool hasNext = result == "clicked";
                 AddLogEntry($"Next page check result: {result}, hasNext: {hasNext}");
                 return hasNext;
+            }
+            catch (Exception ex)
+            {
+                AddLogEntry($"Error checking next page: {ex.Message}");
+                return false;
+            }
+        }
+
+        private async Task<bool> CheckIfNextPageExists()
+        {
+            try
+            {
+                string script = @"
+                    (function() {
+                        let nextButton = document.querySelector('.pageNav-jump.pageNav-jump--next');
+                        if (nextButton) {
+                            nextButton.click();
+                            return 'clicked';
+                        }
+                        return 'not_found';
+                    })()
+                ";
+                string result = await InvokeExecuteScriptRequested(script);
+                
+                if (string.IsNullOrEmpty(result))
+                {
+                    return false;
+                }
+                
+                result = JsonSerializer.Deserialize<string>(result);
+                return result == "clicked";
             }
             catch (Exception ex)
             {

@@ -250,73 +250,32 @@ namespace AIToady.Harvester.ViewModels
 
                 ThreadsToSkip = 0;
 
+                if (_stopAfterCurrentPage)
+                {
+                    hasNextForumPage = false;
+                    AddLogEntry("Stopping after current page as requested");
+                    break;
+                }
+
                 await LoadForumPage();
 
-                // Check if Next element exists and click it, if it 
-                // doesn't exist, we are on the last page
                 if (Url.Contains("akforum.net"))
                 {
-                    string akNextScript = @"
-                        (function() {
-                            let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
-                            if (nextButton) {
-                                nextButton.click();
-                                return 'clicked';
-                            }
-                            return 'not_found';
-                        })()
-                    ";
-                    string akNextResult = await InvokeExecuteScriptRequested(akNextScript);
-                    akNextResult = JsonSerializer.Deserialize<string>(akNextResult);
-                    
-                    if (akNextResult == "clicked")
-                    {
-                        if (_stopAfterCurrentPage)
-                        {
-                            hasNextForumPage = false;
-                            AddLogEntry("Stopping after current page as requested");
-                        }
-                        else
-                        {
-                            await Task.Delay(GetRandomizedDelay());
-                            Url = await InvokeExecuteScriptRequested("window.location.href");
-                            Url = JsonSerializer.Deserialize<string>(Url);
-                            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-                            SaveSettings();
-                        }
-                    }
-                    else
-                    {
-                        hasNextForumPage = false;
-                    }
+                    hasNextForumPage = await LoadNextAKForumsPage();
                 }
                 else
                 {
-                    string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                    string nextResult = await InvokeExecuteScriptRequested(nextScript);
-                    nextResult = JsonSerializer.Deserialize<string>(nextResult);
+                    hasNextForumPage = await LoadNextForumPage();          
+                }
 
-                    if (nextResult == "found")
-                    {
-                        if (_stopAfterCurrentPage)
-                        {
-                            hasNextForumPage = false;
-                            AddLogEntry("Stopping after current page as requested");
-                        }
-                        else
-                        {
-                            await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
-                            await Task.Delay(GetRandomizedDelay());
-                            Url = await InvokeExecuteScriptRequested("window.location.href");
-                            Url = JsonSerializer.Deserialize<string>(Url);
-                            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-                            SaveSettings();
-                        }
-                    }
-                    else
-                    {
-                        hasNextForumPage = false;
-                    }
+                if (hasNextForumPage)
+                {
+                    await Task.Delay(GetRandomizedDelay());
+                    Url = await InvokeExecuteScriptRequested("window.location.href");
+                    Url = JsonSerializer.Deserialize<string>(Url);
+                    AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                    SaveSettings();
+
                 }
             }
 
@@ -327,6 +286,41 @@ namespace AIToady.Harvester.ViewModels
                 HarvestingButtonText = "Start Harvesting";
             }
         }
+
+        private async Task<bool> LoadNextAKForumsPage()
+        {
+            string akNextScript = @"
+                        (function() {
+                            let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
+                            if (nextButton) {
+                                nextButton.click();
+                                return 'clicked';
+                            }
+                            return 'not_found';
+                        })()
+                    ";
+            string akNextResult = await InvokeExecuteScriptRequested(akNextScript);
+            akNextResult = JsonSerializer.Deserialize<string>(akNextResult);
+            return akNextResult == "clicked";
+        }
+
+        private async Task<bool> LoadNextForumPage()
+        {
+            string nextScript = @"
+                        (function() {
+                            let nextButton = document.querySelector('.pageNav-jump.pageNav-jump--next');
+                            if (nextButton) {
+                                nextButton.click();
+                                return 'clicked';
+                            }
+                            return 'not_found';
+                        })()
+                    ";
+            string nextResult = await InvokeExecuteScriptRequested(nextScript);
+            nextResult = JsonSerializer.Deserialize<string>(nextResult);
+            return nextResult == "clicked";
+        }
+
         public void ExecuteGo()
         {
             if (!string.IsNullOrEmpty(Url))
@@ -394,7 +388,7 @@ namespace AIToady.Harvester.ViewModels
             string currentUrl;
             do
             {
-                await Task.Delay(500);
+                await Task.Delay(5000);
                 currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
                 currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
             } while (currentUrl != Url && _isHarvesting);
@@ -427,6 +421,21 @@ namespace AIToady.Harvester.ViewModels
                         if (imageUrl.Contains("postimg.org"))
                         {
                             AddLogEntry($"Skipping postimg.org image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("carbinecreations.com"))
+                        {
+                            AddLogEntry($"Skipping carbinecreations.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("picturetrail.com"))
+                        {
+                            AddLogEntry($"Skipping picturetrail.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("freeimagehosting.net"))
+                        {
+                            AddLogEntry($"Skipping freeimagehosting.net image {imageUrl}");
                             continue;
                         }
                         if (imageUrl.Contains("photobucket.com"))
