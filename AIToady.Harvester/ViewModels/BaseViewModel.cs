@@ -413,6 +413,13 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
+                        // Handle relative URLs by prepending domain from Url property
+                        if (imageUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
+                        {
+                            var uri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
+                            imageUrl = $"{uri.Scheme}://{uri.Host}{imageUrl}";
+                        }
+
                         if (imageUrl.Contains("tinypic.com"))
                         {
                             AddLogEntry($"Skipping tinypic.com image {imageUrl}");
@@ -488,6 +495,14 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string attachmentUrl = message.Attachments[i];
+                        
+                        // Handle relative URLs by prepending domain from Url property
+                        if (attachmentUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
+                        {
+                            var uri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
+                            attachmentUrl = $"{uri.Scheme}://{uri.Host}{attachmentUrl}";
+                        }
+                        
                         string fileName = await GetFileNameFromUrl(i, attachmentUrl);
 
                         if (!System.IO.Directory.Exists(attachmentsFolder))
