@@ -254,34 +254,69 @@ namespace AIToady.Harvester.ViewModels
 
                 // Check if Next element exists and click it, if it 
                 // doesn't exist, we are on the last page
-                string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
-                string nextResult = await InvokeExecuteScriptRequested(nextScript);
-                nextResult = JsonSerializer.Deserialize<string>(nextResult);
-
-                if (nextResult == "found")
+                if (Url.Contains("akforum.net"))
                 {
-                    if (_stopAfterCurrentPage)
+                    string akNextScript = @"
+                        (function() {
+                            let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
+                            if (nextButton) {
+                                nextButton.click();
+                                return 'clicked';
+                            }
+                            return 'not_found';
+                        })()
+                    ";
+                    string akNextResult = await InvokeExecuteScriptRequested(akNextScript);
+                    akNextResult = JsonSerializer.Deserialize<string>(akNextResult);
+                    
+                    if (akNextResult == "clicked")
                     {
-                        hasNextForumPage = false;
-                        AddLogEntry("Stopping after current page as requested");
+                        if (_stopAfterCurrentPage)
+                        {
+                            hasNextForumPage = false;
+                            AddLogEntry("Stopping after current page as requested");
+                        }
+                        else
+                        {
+                            await Task.Delay(GetRandomizedDelay());
+                            Url = await InvokeExecuteScriptRequested("window.location.href");
+                            Url = JsonSerializer.Deserialize<string>(Url);
+                            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                            SaveSettings();
+                        }
                     }
                     else
                     {
-                        //Load the next page by clicking the Next element
-                        await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
-
-                        //Wait for navigation to complete
-                        await Task.Delay(GetRandomizedDelay());
-
-                        Url = await InvokeExecuteScriptRequested("window.location.href");
-                        Url = JsonSerializer.Deserialize<string>(Url);
-                        AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-                        SaveSettings();
+                        hasNextForumPage = false;
                     }
                 }
                 else
                 {
-                    hasNextForumPage = false;
+                    string nextScript = $"document.querySelector('{NextElement}') ? 'found' : 'not_found'";
+                    string nextResult = await InvokeExecuteScriptRequested(nextScript);
+                    nextResult = JsonSerializer.Deserialize<string>(nextResult);
+
+                    if (nextResult == "found")
+                    {
+                        if (_stopAfterCurrentPage)
+                        {
+                            hasNextForumPage = false;
+                            AddLogEntry("Stopping after current page as requested");
+                        }
+                        else
+                        {
+                            await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
+                            await Task.Delay(GetRandomizedDelay());
+                            Url = await InvokeExecuteScriptRequested("window.location.href");
+                            Url = JsonSerializer.Deserialize<string>(Url);
+                            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                            SaveSettings();
+                        }
+                    }
+                    else
+                    {
+                        hasNextForumPage = false;
+                    }
                 }
             }
 

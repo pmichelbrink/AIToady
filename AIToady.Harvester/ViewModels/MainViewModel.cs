@@ -102,7 +102,7 @@ namespace AIToady.Harvester.ViewModels
                     _threadPageNumber++;
                     try
                     {
-                        await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
+                        //await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
                         await Task.Delay(GetRandomizedDelay());
                     }
                     catch (TaskCanceledException)
@@ -124,13 +124,32 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
-                string script = "document.querySelector('.pageNav-jump--next[aria-disabled=\"false\"]') ? 'found' : 'not_found'";
+                string script = @"
+                    (function() {
+                        let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
+                        if (nextButton) {
+                            nextButton.click();
+                            return 'clicked';
+                        }
+                        return 'not_found';
+                    })()
+                ";
                 string result = await InvokeExecuteScriptRequested(script);
+                
+                if (string.IsNullOrEmpty(result))
+                {
+                    AddLogEntry("Script returned null result, assuming no next page");
+                    return false;
+                }
+                
                 result = JsonSerializer.Deserialize<string>(result);
-                return result == "found";
+                bool hasNext = result == "clicked";
+                AddLogEntry($"Next page check result: {result}, hasNext: {hasNext}");
+                return hasNext;
             }
-            catch
+            catch (Exception ex)
             {
+                AddLogEntry($"Error checking next page: {ex.Message}");
                 return false;
             }
         }
