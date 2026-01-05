@@ -192,7 +192,7 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("504"))
+                    if (ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("504") || ex.Message.Contains("522"))
                     {
                         return ex.Message;
                     }

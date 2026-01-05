@@ -33,6 +33,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
         protected List<string> _threadLinks = new List<string>();
+        protected HashSet<string> _badDomains = new HashSet<string>();
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
         protected int _threadPageNumber = 1;
@@ -416,8 +417,29 @@ namespace AIToady.Harvester.ViewModels
                         // Handle relative URLs by prepending domain from Url property
                         if (imageUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
                         {
-                            var uri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
-                            imageUrl = $"{uri.Scheme}://{uri.Host}{imageUrl}";
+                            var imageUri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
+                            imageUrl = $"{imageUri.Scheme}://{imageUri.Host}{imageUrl}";
+                        }
+
+                        // Skip URLs without proper domain (e.g., "http://IMG_20170901_195125885.jpg")
+                        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) && !uri.Host.Contains("."))
+                        {
+                            AddLogEntry($"Skipping URL without domain: {imageUrl}");
+                            continue;
+                        }
+
+                        // Skip URLs containing BBCode tags
+                        if (imageUrl.Contains("[url]") || imageUrl.Contains("[/url]"))
+                        {
+                            AddLogEntry($"Skipping URL with BBCode tags: {imageUrl}");
+                            continue;
+                        }
+
+                        // Skip domains that have previously failed
+                        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var checkUri) && _badDomains.Contains(checkUri.Host))
+                        {
+                            AddLogEntry($"Skipping known bad domain: {checkUri.Host}");
+                            continue;
                         }
 
                         if (imageUrl.Contains("tinypic.com"))
@@ -485,10 +507,14 @@ namespace AIToady.Harvester.ViewModels
                             imageNames.Add(fileName);
                             _threadImageCounter++;
                         }
-                        else if (!result.Contains("403") && !result.Contains("404") && !result.Contains("504"))
+                        if (result.Contains("403") || result.Contains("404") || result.Contains("504") || result.Contains("522"))
                         {
-                            if (!imageUrl.Contains("photobucket.com"))
-                                AddLogEntry($"Failed to extract image {fileName}, skipping");
+                            AddLogEntry($"Failed to extract image {fileName}, skipping");
+                            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
+                            {
+                                _badDomains.Add(failedUri.Host);
+                                AddLogEntry($"Added {failedUri.Host} to bad domains list");
+                            }
                         }            
                     }
                     catch (TaskCanceledException)
@@ -567,6 +593,8 @@ namespace AIToady.Harvester.ViewModels
 
         public void SaveSettings()
         {
+            SaveBadDomains();
+
             Properties.Settings.Default.Url = Url;
             Properties.Settings.Default.NextElement = NextElement;
             Properties.Settings.Default.ThreadElement = ThreadElement;
@@ -584,8 +612,37 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.HoursOfOperationEnabled = HoursOfOperationEnabled;
             Properties.Settings.Default.Save();
         }
+
+        public void SaveBadDomains()
+        {
+            try
+            {
+                string badDomainsFile = Path.Combine(_rootFolder, "bad_domains.txt");
+                File.WriteAllLines(badDomainsFile, _badDomains);
+            }
+            catch { }
+        }
+
+        public void LoadBadDomains()
+        {
+            try
+            {
+                string badDomainsFile = Path.Combine(_rootFolder, "bad_domains.txt");
+                if (File.Exists(badDomainsFile))
+                {
+                    var domains = File.ReadAllLines(badDomainsFile);
+                    _badDomains.Clear();
+                    foreach (var domain in domains)
+                        _badDomains.Add(domain);
+                    AddLogEntry($"Loaded {_badDomains.Count} bad domains from file");
+                }
+            }
+            catch { }
+        }
         public void LoadSettings()
         {
+            LoadBadDomains();
+
             Url = string.IsNullOrEmpty(Properties.Settings.Default.Url) ? "akfiles.com" : Properties.Settings.Default.Url;
             NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
             ThreadElement = Properties.Settings.Default.ThreadElement;
