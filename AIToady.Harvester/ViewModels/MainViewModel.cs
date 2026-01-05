@@ -119,9 +119,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 
                 result = JsonSerializer.Deserialize<string>(result);
-                bool hasNext = result == "clicked";
-                AddLogEntry($"Next page check result: {result}, hasNext: {hasNext}");
-                return hasNext;
+                return result == "clicked";
             }
             catch (Exception ex)
             {

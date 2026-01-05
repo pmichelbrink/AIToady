@@ -474,7 +474,12 @@ namespace AIToady.Harvester.ViewModels
 
                         string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
                         await ExtractImageRequested?.Invoke(imageUrl, imagePath);
-                        imageNames.Add(fileName);
+
+                        if (File.Exists(imagePath))
+                            imageNames.Add(fileName);
+                        else
+                            AddLogEntry($"Failed to extract image {fileName}, skipping");
+
                         _threadImageCounter++;
                     }
                     catch (TaskCanceledException)
