@@ -40,7 +40,7 @@ namespace AIToady.Harvester.ViewModels
         protected int _threadImageCounter = 1;
         protected string _threadName;
         protected System.Timers.Timer _operatingHoursTimer;
-        public event Func<string, string, Task> ExtractImageRequested;
+        public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
@@ -445,11 +445,16 @@ namespace AIToady.Harvester.ViewModels
                             AddLogEntry($"Skipping freeimagehosting.net image {imageUrl}");
                             continue;
                         }
-                        if (imageUrl.Contains("photobucket.com"))
+                        if (imageUrl.Contains("novarata.net"))
                         {
-                            AddLogEntry($"Skipping photobucket.com image {imageUrl}");
+                            AddLogEntry($"Skipping novarata.net image {imageUrl}");
                             continue;
                         }
+                        //if (imageUrl.Contains("photobucket.com"))
+                        //{
+                        //    AddLogEntry($"Skipping photobucket.com image {imageUrl}");
+                        //    continue;
+                        //}
 
                         if (imageUrl.Contains("imgur.com/a/"))
                         {
@@ -473,14 +478,18 @@ namespace AIToady.Harvester.ViewModels
                             System.IO.Directory.CreateDirectory(imagesFolder);
 
                         string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
-                        await ExtractImageRequested?.Invoke(imageUrl, imagePath);
+                        string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
 
                         if (File.Exists(imagePath))
+                        {
                             imageNames.Add(fileName);
-                        else
-                            AddLogEntry($"Failed to extract image {fileName}, skipping");
-
-                        _threadImageCounter++;
+                            _threadImageCounter++;
+                        }
+                        else if (!result.Contains("403") && !result.Contains("404") && !result.Contains("504"))
+                        {
+                            if (!imageUrl.Contains("photobucket.com"))
+                                AddLogEntry($"Failed to extract image {fileName}, skipping");
+                        }            
                     }
                     catch (TaskCanceledException)
                     {

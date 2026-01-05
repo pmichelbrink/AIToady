@@ -134,7 +134,7 @@ namespace AIToady.Harvester
             catch { }
         }
 
-        private async Task ExtractImageFromWebView(string imageUrl, string filePath)
+        private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try
             {
@@ -181,16 +181,22 @@ namespace AIToady.Harvester
                             result = result.Trim('"');
                             imageBytes = Convert.FromBase64String(result);
                         }
-                        else return;
+                        else return "success";
                     }
 
                     await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                    return "success";
                 }
             }
-            catch 
+            catch (Exception ex) 
             {
                 try
                 {
+                    if (ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("504"))
+                    {
+                        return ex.Message;
+                    }
+
                     string currentUrl = WebView.Source?.ToString();
                     WebView.Source = new Uri(imageUrl);
                     await Task.Delay(2000);
@@ -220,9 +226,11 @@ namespace AIToady.Harvester
                         result = result.Trim('"');
                         var imageBytes = Convert.FromBase64String(result);
                         await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                        return "success";
                     }
+                    return "failure";
                 }
-                catch { }
+                catch { return "failure"; }
             }
         }
 
