@@ -414,6 +414,21 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
+                        // Handle photobucket BBCode format
+                        if (imageUrl.Contains("[IMG]"))
+                        {
+                            int imgIndex = imageUrl.IndexOf("[IMG]");
+                            imageUrl = imageUrl.Substring(imgIndex + 5);
+                        }
+
+                        // Extract src from HTML img tags
+                        if (imageUrl.Contains("src="))
+                        {
+                            var match = System.Text.RegularExpressions.Regex.Match(imageUrl, @"src=[""'](.*?)[""']");
+                            if (match.Success)
+                                imageUrl = match.Groups[1].Value;
+                        }
+
                         // Handle relative URLs by prepending domain from Url property
                         if (imageUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
                         {
@@ -447,6 +462,11 @@ namespace AIToady.Harvester.ViewModels
                             AddLogEntry($"Skipping tinypic.com image {imageUrl}");
                             continue;
                         }
+                        if (imageUrl.Contains("imgsafe.org"))
+                        {
+                            AddLogEntry($"Skipping imgsafe.org image {imageUrl}");
+                            continue;
+                        }
                         if (imageUrl.Contains("postimg.org"))
                         {
                             AddLogEntry($"Skipping postimg.org image {imageUrl}");
@@ -462,6 +482,26 @@ namespace AIToady.Harvester.ViewModels
                             AddLogEntry($"Skipping picturetrail.com image {imageUrl}");
                             continue;
                         }
+                        if (imageUrl.Contains("hillarymilesproductions.com"))
+                        {
+                            AddLogEntry($"Skipping hillarymilesproductions.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("pbsrc.com"))
+                        {
+                            AddLogEntry($"Skipping pbsrc.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("fearlessmen.com"))
+                        {
+                            AddLogEntry($"Skipping fearlessmen.com image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("allbackgrounds.com"))
+                        {
+                            AddLogEntry($"Skipping allbackgrounds.com image {imageUrl}");
+                            continue;
+                        }
                         if (imageUrl.Contains("freeimagehosting.net"))
                         {
                             AddLogEntry($"Skipping freeimagehosting.net image {imageUrl}");
@@ -470,6 +510,16 @@ namespace AIToady.Harvester.ViewModels
                         if (imageUrl.Contains("novarata.net"))
                         {
                             AddLogEntry($"Skipping novarata.net image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("combatmachine.net"))
+                        {
+                            AddLogEntry($"Skipping combatmachine.net image {imageUrl}");
+                            continue;
+                        }
+                        if (imageUrl.Contains("hostingpics.net"))
+                        {
+                            AddLogEntry($"Skipping hostingpics.net image {imageUrl}");
                             continue;
                         }
                         //if (imageUrl.Contains("photobucket.com"))
@@ -504,18 +554,34 @@ namespace AIToady.Harvester.ViewModels
 
                         if (File.Exists(imagePath))
                         {
-                            imageNames.Add(fileName);
-                            _threadImageCounter++;
+                            if (IsHtmlFile(imagePath))
+                            {
+                                File.Delete(imagePath);
+                                AddLogEntry($"Deleted HTML file masquerading as image: {fileName}");
+                            }
+                            else
+                            {
+                                imageNames.Add(fileName);
+                                _threadImageCounter++;
+                            }
                         }
-                        if (result.Contains("403") || result.Contains("404") || result.Contains("504") || result.Contains("522"))
+                        else if (result.Contains("SSL") || result.Contains("403") || result.Contains("404"))
                         {
-                            AddLogEntry($"Failed to extract image {fileName}, skipping");
+                            AddLogEntry($"Failed to find image {imageUrl}, skipping");
+                        }
+                        else if (result.Contains("504") || result.Contains("522"))
+                        {
+                            AddLogEntry($"Image timeout {imageUrl}, skipping");
                             if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
                             {
                                 _badDomains.Add(failedUri.Host);
                                 AddLogEntry($"Added {failedUri.Host} to bad domains list");
                             }
-                        }            
+                        }
+                        else
+                        {
+
+                        }
                     }
                     catch (TaskCanceledException)
                     {
@@ -734,10 +800,25 @@ namespace AIToady.Harvester.ViewModels
                 await System.IO.File.WriteAllTextAsync(fileName, json);
             }
         }
+        private bool IsHtmlFile(string filePath)
+        {
+            try
+            {
+                string content = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+                string firstPart = content.Length > 200 ? content.Substring(0, 200) : content;
+                return firstPart.Contains("<html") || firstPart.Contains("<HTML") || firstPart.Contains("<!DOCTYPE");
+            }
+            catch { return false; }
+        }
+
         public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
         {                        // Generate random filename for Google Photos URLs
             if (attachmentUrl.Contains("googleusercontent.com"))
                 return $"google_photo_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+
+            // Strip query parameters
+            if (attachmentUrl.Contains("?"))
+                attachmentUrl = attachmentUrl.Split('?')[0];
 
             // Extract filename from URL path
             string fileName = System.IO.Path.GetFileName(attachmentUrl.TrimEnd('/'));
