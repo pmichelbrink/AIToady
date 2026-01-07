@@ -39,7 +39,7 @@ namespace AIToady.Harvester.ViewModels
             "tinypic.com", "imgsafe.org", "postimg.org", "carbinecreations.com",
             "picturetrail.com", "hillarymilesproductions.com", "pbsrc.com",
             "fearlessmen.com", "allbackgrounds.com", "freeimagehosting.net",
-            "novarata.net", "combatmachine.net", "hostingpics.net"
+            "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", "funnywebsite.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -599,7 +599,7 @@ namespace AIToady.Harvester.ViewModels
                                 _threadImageCounter++;
                             }
                         }
-                        else if (result.Contains("403") || result.Contains("404"))
+                        else if (result.Contains("failed to respond") || result.Contains("no data") || result.Contains("403") || result.Contains("404"))
                         {
                             AddLogEntry($"Failed to find image {imageUrl}, skipping");
                         }

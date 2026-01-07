@@ -1,6 +1,7 @@
 using AIToady.Harvester.ViewModels;
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
@@ -113,23 +114,17 @@ namespace AIToady.Harvester
                 {
                     result = result.Trim('"');
                     var attachmentBytes = Convert.FromBase64String(result);
-                    await System.IO.File.WriteAllBytesAsync(filePath, attachmentBytes);
+                    await File.WriteAllBytesAsync(filePath, attachmentBytes);
                 }
 
+                // Check Downloads folder for the file
+                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                string fileName = Path.GetFileName(filePath);
+                string downloadedFile = Path.Combine(downloadsPath, fileName);
 
-
-                if (Path.GetExtension(filePath).ToLower().Contains("mov") ||
-                    Path.GetExtension(filePath).ToLower().Contains("pdf"))
+                if (File.Exists(downloadedFile))
                 {
-                    // Check Downloads folder for the file
-                    string downloadsPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                    string fileName = System.IO.Path.GetFileName(filePath);
-                    string downloadedFile = System.IO.Path.Combine(downloadsPath, fileName);
-
-                    if (System.IO.Directory.Exists(downloadedFile))
-                    {
-                        System.IO.File.Move(downloadedFile, filePath, true);
-                    }
+                    File.Move(downloadedFile, filePath, true);
                 }
             }
             catch { }
@@ -182,7 +177,7 @@ namespace AIToady.Harvester
                             result = result.Trim('"');
                             imageBytes = Convert.FromBase64String(result);
                         }
-                        else return "success";
+                        else return "failure";
                     }
 
                     await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
@@ -193,7 +188,7 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.Contains("error occurred while sending the request") || ex.Message.Contains("such host is known") || ex.Message.Contains("SSL") || ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("441") || ex.Message.Contains("504") || ex.Message.Contains("522"))
+                    if (ex.Message.Contains("failed to respond") || ex.Message.Contains("no data") || ex.Message.Contains("error occurred while sending the request") || ex.Message.Contains("such host is known") || ex.Message.Contains("SSL") || ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("441") || ex.Message.Contains("504") || ex.Message.Contains("522"))
                     {
                         return ex.Message;
                     }
