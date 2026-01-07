@@ -3,6 +3,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
@@ -19,21 +20,27 @@ namespace AIToady.Harvester.ViewModels
         protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
-        protected string _url = "akfiles.com";
+        protected string _url = string.Empty;
         protected string _nextElement = ".pageNav-jump--next";
-        protected string _threadElement = "";
+        protected string _threadElement = "structItem-title";
         protected int _pageLoadDelay = 6;
         protected bool _isHarvesting = false;
         protected bool _isCapturingElement = false;
         protected string _rootFolder = GetDriveWithMostFreeSpace();
         protected string _startTime = "09:00";
-        protected string _endTime = "17:00";
+        protected string _endTime = "23:00";
         protected string _harvestingButtonText = "Start Harvesting";
         protected bool _stopAfterCurrentPage = false;
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
         protected List<string> _threadLinks = new List<string>();
-        protected HashSet<string> _badDomains = new HashSet<string>();
+        protected HashSet<string> _badDomains = new HashSet<string>
+        {
+            "tinypic.com", "imgsafe.org", "postimg.org", "carbinecreations.com",
+            "picturetrail.com", "hillarymilesproductions.com", "pbsrc.com",
+            "fearlessmen.com", "allbackgrounds.com", "freeimagehosting.net",
+            "novarata.net", "combatmachine.net", "hostingpics.net"
+        };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
         protected int _threadPageNumber = 1;
@@ -45,8 +52,10 @@ namespace AIToady.Harvester.ViewModels
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
+        public event Action ViewModelSwitchRequested;
 
-        protected virtual async Task<ForumThread> HarvestThread(string threadUrl) { return new ForumThread(); }
+        protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
+        protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
         protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
         protected async Task<string> InvokeExecuteScriptRequested(string script) => await ExecuteScriptRequested?.Invoke(script);
         protected static string GetDriveWithMostFreeSpace()
@@ -177,7 +186,7 @@ namespace AIToady.Harvester.ViewModels
         public ICommand NextCommand { get; protected set; }
         public ICommand LoadThreadsCommand { get; protected set; }
         public ICommand StartHarvestingCommand { get; protected set; }
-        
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -259,15 +268,8 @@ namespace AIToady.Harvester.ViewModels
                 }
 
                 await LoadForumPage();
-
-                if (Url.Contains("akforum.net"))
-                {
-                    hasNextForumPage = await LoadNextAKForumsPage();
-                }
-                else
-                {
-                    hasNextForumPage = await LoadNextForumPage();          
-                }
+                    
+                hasNextForumPage = await LoadNextForumPage();
 
                 if (hasNextForumPage)
                 {
@@ -287,7 +289,80 @@ namespace AIToady.Harvester.ViewModels
                 HarvestingButtonText = "Start Harvesting";
             }
         }
+        protected async Task<ForumThread> HarvestThread(string threadUrl)
+        {
+            _threadImageCounter = 1;
+            _threadPageNumber = 1;
+            InvokeNavigateRequested(threadUrl);
+            await Task.Delay(GetRandomizedDelay());
 
+            var thread = new ForumThread();
+
+            // Get thread name from page title
+            string titleScript = "document.title";
+            string titleResult = await InvokeExecuteScriptRequested(titleScript);
+            thread.ThreadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+
+            _threadName = thread.ThreadName;
+
+            if (_threadName.Contains('|'))
+                _threadName = _threadName.Split('|')[0].Trim();
+
+            // Extract thread ID from URL and append to thread name
+            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
+            if (!string.IsNullOrEmpty(threadId))
+                _threadName += $"_{threadId}";
+
+            _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            string threadFolder = Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
+
+            // Check if thread folder exists and skip if SkipExistingThreads is true
+            if (SkipExistingThreads && Directory.Exists(threadFolder))
+            {
+                AddLogEntry($"Skipping existing thread: {_threadName}");
+                return null;
+            }
+            string imagesFolder = Path.Combine(threadFolder, "Images");
+
+            // Loop through all pages in the thread
+            bool hasNextPage = true;
+            while (_isHarvesting && hasNextPage)
+            {
+                List<ForumMessage> pageMessages = await HarvestPage();
+
+                if (pageMessages.Count == 0)
+                {
+                }
+
+                // Extract images and attachments for each message
+                await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
+
+                AddLogEntry($"Page {_threadPageNumber} Harvested");
+
+                bool nextPageExists = await CheckIfNextPageExists();
+
+                if (nextPageExists)
+                {
+                    _threadPageNumber++;
+                    try
+                    {
+                        //await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
+                        await Task.Delay(GetRandomizedDelay());
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        AddLogEntry("Navigation timeout, continuing to next thread");
+                        hasNextPage = false;
+                    }
+                }
+                else
+                {
+                    hasNextPage = false;
+                }
+            }
+
+            return thread;
+        }
         private async Task<bool> LoadNextAKForumsPage()
         {
             string akNextScript = @"
@@ -322,7 +397,9 @@ namespace AIToady.Harvester.ViewModels
             return nextResult == "clicked";
         }
 
-        public void ExecuteGo()
+        protected virtual async Task ExtractForumName() { }
+
+        public virtual async void ExecuteGo()
         {
             if (!string.IsNullOrEmpty(Url))
             {
@@ -331,7 +408,16 @@ namespace AIToady.Harvester.ViewModels
                 {
                     url = "https://" + url;
                 }
+                
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host.Contains("theakforum.net") && GetType() != typeof(TheAKForumViewModel))
+                {
+                    ViewModelSwitchRequested?.Invoke();
+                    return;
+                }
+                
                 NavigateRequested?.Invoke(url);
+                await Task.Delay(20000);
+                await ExtractForumName();
             }
         }
 
@@ -399,6 +485,22 @@ namespace AIToady.Harvester.ViewModels
             var match = System.Text.RegularExpressions.Regex.Match(url, @"/page-(\d+)");
             return match.Success ? int.Parse(match.Groups[1].Value) : 1;
         }
+        private bool IsUrlFromBadDomain(string imageUrl)
+        {
+            if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) || !uri.Host.Contains("."))
+            {
+                AddLogEntry($"Skipping invalid URL: {imageUrl}");
+                return true;
+            }
+
+            if (_badDomains.Any(domain => uri.Host.Contains(domain)))
+            {
+                AddLogEntry($"Skipping known bad domain: {uri.Host}");
+                return true;
+            }
+            return false;
+        }
+
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
             string imagesFolder = Path.Combine(threadFolder, "Images");
@@ -429,18 +531,18 @@ namespace AIToady.Harvester.ViewModels
                                 imageUrl = match.Groups[1].Value;
                         }
 
-                        // Handle relative URLs by prepending domain from Url property
-                        if (imageUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
-                        {
-                            var imageUri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
-                            imageUrl = $"{imageUri.Scheme}://{imageUri.Host}{imageUrl}";
-                        }
-
                         // Skip URLs without proper domain (e.g., "http://IMG_20170901_195125885.jpg")
                         if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) && !uri.Host.Contains("."))
                         {
                             AddLogEntry($"Skipping URL without domain: {imageUrl}");
                             continue;
+                        }
+
+                        // Handle relative URLs by prepending domain from Url property
+                        if (imageUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
+                        {
+                            var imageUri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
+                            imageUrl = $"{imageUri.Scheme}://{imageUri.Host}{imageUrl}";
                         }
 
                         // Skip URLs containing BBCode tags
@@ -450,78 +552,10 @@ namespace AIToady.Harvester.ViewModels
                             continue;
                         }
 
-                        // Skip domains that have previously failed
-                        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var checkUri) && _badDomains.Contains(checkUri.Host))
-                        {
-                            AddLogEntry($"Skipping known bad domain: {checkUri.Host}");
+                        // Skip domains that have previously failed or are known bad domains
+                        if (IsUrlFromBadDomain(imageUrl))
                             continue;
-                        }
 
-                        if (imageUrl.Contains("tinypic.com"))
-                        {
-                            AddLogEntry($"Skipping tinypic.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("imgsafe.org"))
-                        {
-                            AddLogEntry($"Skipping imgsafe.org image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("postimg.org"))
-                        {
-                            AddLogEntry($"Skipping postimg.org image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("carbinecreations.com"))
-                        {
-                            AddLogEntry($"Skipping carbinecreations.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("picturetrail.com"))
-                        {
-                            AddLogEntry($"Skipping picturetrail.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("hillarymilesproductions.com"))
-                        {
-                            AddLogEntry($"Skipping hillarymilesproductions.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("pbsrc.com"))
-                        {
-                            AddLogEntry($"Skipping pbsrc.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("fearlessmen.com"))
-                        {
-                            AddLogEntry($"Skipping fearlessmen.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("allbackgrounds.com"))
-                        {
-                            AddLogEntry($"Skipping allbackgrounds.com image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("freeimagehosting.net"))
-                        {
-                            AddLogEntry($"Skipping freeimagehosting.net image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("novarata.net"))
-                        {
-                            AddLogEntry($"Skipping novarata.net image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("combatmachine.net"))
-                        {
-                            AddLogEntry($"Skipping combatmachine.net image {imageUrl}");
-                            continue;
-                        }
-                        if (imageUrl.Contains("hostingpics.net"))
-                        {
-                            AddLogEntry($"Skipping hostingpics.net image {imageUrl}");
-                            continue;
-                        }
                         //if (imageUrl.Contains("photobucket.com"))
                         //{
                         //    AddLogEntry($"Skipping photobucket.com image {imageUrl}");
@@ -565,11 +599,11 @@ namespace AIToady.Harvester.ViewModels
                                 _threadImageCounter++;
                             }
                         }
-                        else if (result.Contains("SSL") || result.Contains("403") || result.Contains("404"))
+                        else if (result.Contains("403") || result.Contains("404"))
                         {
                             AddLogEntry($"Failed to find image {imageUrl}, skipping");
                         }
-                        else if (result.Contains("504") || result.Contains("522"))
+                        else if (result.Contains("error occurred while sending the request") || result.Contains("such host is known") || result.Contains("SSL") || result.Contains("441") || result.Contains("504") || result.Contains("522"))
                         {
                             AddLogEntry($"Image timeout {imageUrl}, skipping");
                             if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
@@ -601,14 +635,14 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string attachmentUrl = message.Attachments[i];
-                        
+
                         // Handle relative URLs by prepending domain from Url property
                         if (attachmentUrl.StartsWith("/") && !string.IsNullOrEmpty(Url))
                         {
                             var uri = new Uri(Url.StartsWith("http") ? Url : "https://" + Url);
                             attachmentUrl = $"{uri.Scheme}://{uri.Host}{attachmentUrl}";
                         }
-                        
+
                         string fileName = await GetFileNameFromUrl(i, attachmentUrl);
 
                         if (!System.IO.Directory.Exists(attachmentsFolder))
@@ -697,7 +731,6 @@ namespace AIToady.Harvester.ViewModels
                 if (File.Exists(badDomainsFile))
                 {
                     var domains = File.ReadAllLines(badDomainsFile);
-                    _badDomains.Clear();
                     foreach (var domain in domains)
                         _badDomains.Add(domain);
                     AddLogEntry($"Loaded {_badDomains.Count} bad domains from file");
@@ -736,7 +769,7 @@ namespace AIToady.Harvester.ViewModels
         {
             if (!HoursOfOperationEnabled)
                 return true;
-                
+
             if (!TimeSpan.TryParse(StartTime, out var startTime) || !TimeSpan.TryParse(EndTime, out var endTime))
                 return true;
 
@@ -791,7 +824,7 @@ namespace AIToady.Harvester.ViewModels
                     message.Message = message.Message?.Replace("\n", " ").Replace("\r", " ");
                     message.Message = System.Text.RegularExpressions.Regex.Replace(message.Message ?? "", @"\s+", " ");
                 }
-                
+
                 string threadFolder = System.IO.Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
                 System.IO.Directory.CreateDirectory(threadFolder);
 
@@ -832,7 +865,7 @@ namespace AIToady.Harvester.ViewModels
                         httpClient.Timeout = TimeSpan.FromSeconds(5);
                         var response = await httpClient.SendAsync(new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, attachmentUrl));
                         var contentType = response.Content.Headers.ContentType?.MediaType;
-                        
+
                         string extension = contentType switch
                         {
                             "image/jpeg" => ".jpg",
@@ -841,7 +874,7 @@ namespace AIToady.Harvester.ViewModels
                             "image/webp" => ".webp",
                             _ => ".jpg"
                         };
-                        
+
                         fileName = string.IsNullOrEmpty(fileName) ? $"image_{fileIndex + 1}{extension}" : $"{fileName}{extension}";
                     }
                 }
@@ -871,21 +904,21 @@ namespace AIToady.Harvester.ViewModels
             {
                 // Extract album ID from URL (e.g., https://imgur.com/a/nkoWLuL -> nkoWLuL)
                 string albumId = albumUrl.Split('/').Last();
-                
+
                 using (var httpClient = new System.Net.Http.HttpClient())
                 {
                     // Use Imgur API to get album data
                     string apiUrl = $"https://api.imgur.com/3/album/{albumId}";
                     httpClient.DefaultRequestHeaders.Add("Authorization", "Client-ID 546c25a59c58ad7");
-                    
+
                     var response = await httpClient.GetStringAsync(apiUrl);
                     var json = System.Text.Json.JsonDocument.Parse(response);
-                    
+
                     if (json.RootElement.GetProperty("success").GetBoolean())
                     {
                         var images = json.RootElement.GetProperty("data").GetProperty("images");
                         int imageIndex = 0;
-                        
+
                         foreach (var image in images.EnumerateArray())
                         {
                             try
@@ -893,10 +926,10 @@ namespace AIToady.Harvester.ViewModels
                                 string directImageUrl = image.GetProperty("link").GetString();
                                 string fileName = await GetFileNameFromUrl(imageIndex, directImageUrl);
                                 string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
-                                
+
                                 if (!System.IO.Directory.Exists(imagesFolder))
                                     System.IO.Directory.CreateDirectory(imagesFolder);
-                                    
+
                                 await ExtractImageRequested?.Invoke(directImageUrl, imagePath);
                                 albumImages.Add(fileName);
                                 imageIndex++;
@@ -908,7 +941,7 @@ namespace AIToady.Harvester.ViewModels
                             }
                         }
                     }
-                    
+
                     AddLogEntry($"Processed imgur album: {albumImages.Count} images from {albumUrl}");
                 }
             }
@@ -931,6 +964,28 @@ namespace AIToady.Harvester.ViewModels
             {
                 NextElement = result;
             }
+        }
+
+        public T CloneToViewModel<T>() where T : BaseViewModel, new()
+        {
+            var newViewModel = new T();
+            newViewModel._siteName = _siteName;
+            newViewModel._forumName = _forumName;
+            newViewModel._messageElement = _messageElement;
+            newViewModel._imageElement = _imageElement;
+            newViewModel._attachmentElement = _attachmentElement;
+            newViewModel._threadsToSkip = _threadsToSkip;
+            newViewModel._url = _url;
+            newViewModel._nextElement = _nextElement;
+            newViewModel._threadElement = _threadElement;
+            newViewModel._pageLoadDelay = _pageLoadDelay;
+            newViewModel._rootFolder = _rootFolder;
+            newViewModel._startTime = _startTime;
+            newViewModel._endTime = _endTime;
+            newViewModel._skipExistingThreads = _skipExistingThreads;
+            newViewModel._hoursOfOperationEnabled = _hoursOfOperationEnabled;
+            newViewModel._badDomains = new HashSet<string>(_badDomains);
+            return newViewModel;
         }
 
         public void Dispose()

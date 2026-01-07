@@ -12,7 +12,7 @@ namespace AIToady.Harvester
 {
     public partial class MainWindow : Window
     {
-        private MainViewModel _viewModel;
+        private BaseViewModel _viewModel;
         private bool _isCapturingElement = false;
         private bool _isThreadElementCapture = false;
         private bool _isMessageElementCapture = false;
@@ -29,6 +29,7 @@ namespace AIToady.Harvester
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
+            _viewModel.ViewModelSwitchRequested += SwitchToTheAKForumViewModel;
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
@@ -192,7 +193,7 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.Contains("SSL") || ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("504") || ex.Message.Contains("522"))
+                    if (ex.Message.Contains("error occurred while sending the request") || ex.Message.Contains("such host is known") || ex.Message.Contains("SSL") || ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("441") || ex.Message.Contains("504") || ex.Message.Contains("522"))
                     {
                         return ex.Message;
                     }
@@ -402,6 +403,22 @@ namespace AIToady.Harvester
 
         private string _lastSortColumn = "";
         private bool _lastSortAscending = true;
+
+        private void SwitchToTheAKForumViewModel()
+        {
+            var newViewModel = _viewModel.CloneToViewModel<TheAKForumViewModel>();
+            _viewModel.Dispose();
+            _viewModel = newViewModel;
+            DataContext = _viewModel;
+            
+            _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
+            _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
+            _viewModel.ExtractImageRequested += ExtractImageFromWebView;
+            _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
+            _viewModel.ViewModelSwitchRequested += SwitchToTheAKForumViewModel;
+            
+            _viewModel.ExecuteGo();
+        }
 
         private void LogColumnHeader_Click(object sender, RoutedEventArgs e)
         {
