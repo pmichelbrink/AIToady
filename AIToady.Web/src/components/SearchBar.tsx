@@ -3,16 +3,17 @@ import './SearchBar.css';
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
+  onInputChange?: (query: string) => void;
   placeholder?: string;
   style?: React.CSSProperties;
 }
 
-export default function SearchBar({ onSearch, placeholder = "Search...", style }: SearchBarProps) {
+export default function SearchBar({ onSearch, onInputChange, placeholder = "Search...", style }: SearchBarProps) {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim() && onSearch) {
+    if (onSearch) {
       onSearch(query.trim());
     }
   };
@@ -23,7 +24,12 @@ export default function SearchBar({ onSearch, placeholder = "Search...", style }
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (onInputChange) {
+              onInputChange(e.target.value);
+            }
+          }}
           placeholder={placeholder}
           className="search-input"
         />
