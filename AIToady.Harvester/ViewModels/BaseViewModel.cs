@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
@@ -422,7 +423,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 
                 NavigateRequested?.Invoke(url);
-                await Task.Delay(20000);
+                await Task.Delay(2000);
                 await ExtractForumName();
             }
         }
@@ -723,7 +724,7 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
-                string badDomainsFile = Path.Combine(_rootFolder, "bad_domains.txt");
+                string badDomainsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bad_domains.txt");
                 File.WriteAllLines(badDomainsFile, _badDomains);
             }
             catch { }
@@ -733,7 +734,7 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
-                string badDomainsFile = Path.Combine(_rootFolder, "bad_domains.txt");
+                string badDomainsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bad_domains.txt");
                 if (File.Exists(badDomainsFile))
                 {
                     var domains = File.ReadAllLines(badDomainsFile);

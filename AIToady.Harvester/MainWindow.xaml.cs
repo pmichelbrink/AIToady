@@ -181,7 +181,7 @@ namespace AIToady.Harvester
                         else return "404";
                     }
 
-                    await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                    await File.WriteAllBytesAsync(filePath, imageBytes);
                     return "success";
                 }
             }
@@ -220,12 +220,15 @@ namespace AIToady.Harvester
                     {
                         result = result.Trim('"');
                         var imageBytes = Convert.FromBase64String(result);
-                        await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                        await File.WriteAllBytesAsync(filePath, imageBytes);
                         return "success";
                     }
-                    return "failure";
+                    return ex.Message;
                 }
-                catch { return "failure"; }
+                catch (Exception ex2)
+                { 
+                    return ex2.Message; 
+                }
             }
         }
 
