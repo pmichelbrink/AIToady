@@ -4,7 +4,8 @@ namespace AIToady.Infrastructure
     {
         public static bool IsUnavailableError(this string message)
         {
-            return message.Contains("301") || message.Contains("400") || message.Contains("410") || message.Contains("443") || message.Contains("failed to respond") || 
+            return message.Contains("301") || message.Contains("400") || message.Contains("410") || message.Contains("429") || 
+                   message.Contains("443") || message.Contains("failed to respond") || 
                    message.Contains("no data") || message.Contains("403") || message.Contains("404") || message.Contains("409") || message.Contains("500");
         }
 
@@ -12,7 +13,7 @@ namespace AIToady.Infrastructure
         {
             return message.Contains("error occurred while sending the request") || message.Contains("such host is known") || 
                    message.Contains("SSL") || message.Contains("441") || message.Contains("502") || message.Contains("503") || 
-                   message.Contains("504") || message.Contains("522");
+                   message.Contains("504") || message.Contains("521") || message.Contains("522");
         }
 
         public static string GetRootDomain(this string host)

@@ -1,0 +1,23 @@
+.search-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.search-btn {
+  background-color: #f8f9fa;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  color: #3c4043;
+  font-size: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  width: 160px;
+}
+
+.search-btn:hover {
+  box-shadow: 0 1px 1px rgba(0,0,0,.1);
+  background-color: #f1f3f4;
+  border: 1px solid #c6c6c6;
+}

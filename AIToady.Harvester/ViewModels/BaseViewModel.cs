@@ -43,7 +43,7 @@ namespace AIToady.Harvester.ViewModels
             "fearlessmen.com", "allbackgrounds.com", "freeimagehosting.net",
             "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", 
             "funnywebsite.com", "weaponarts.com", "bing.net", "sightpusher.com",
-            "groundedparents.com", "adrenaljunkie.com"
+            "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
