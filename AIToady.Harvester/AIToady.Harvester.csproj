@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AIToady.Infrastructure\AIToady.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

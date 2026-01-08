@@ -1,4 +1,5 @@
 using AIToady.Harvester.Models;
+using AIToady.Infrastructure;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -39,7 +40,9 @@ namespace AIToady.Harvester.ViewModels
             "tinypic.com", "imgsafe.org", "postimg.org", "carbinecreations.com",
             "picturetrail.com", "hillarymilesproductions.com", "pbsrc.com",
             "fearlessmen.com", "allbackgrounds.com", "freeimagehosting.net",
-            "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", "funnywebsite.com"
+            "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", 
+            "funnywebsite.com", "weaponarts.com", "bing.net", "sightpusher.com",
+            "groundedparents.com", "adrenaljunkie.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -206,14 +209,14 @@ namespace AIToady.Harvester.ViewModels
 
             if (!IsWithinOperatingHours())
             {
-                MessageBox.Show("Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Application.Current.MainWindow, "Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
                 HarvestingButtonText = "Sleeping";
                 return;
             }
 
             if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
             {
-                MessageBox.Show("Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(Application.Current.MainWindow, "Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 _isHarvesting = false;
                 HarvestingButtonText = "Start Harvesting";
                 return;
@@ -221,7 +224,7 @@ namespace AIToady.Harvester.ViewModels
 
             if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
             {
-                MessageBox.Show("Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(Application.Current.MainWindow, "Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 _isHarvesting = false;
                 HarvestingButtonText = "Start Harvesting";
                 return;
@@ -229,11 +232,12 @@ namespace AIToady.Harvester.ViewModels
 
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
-            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
 
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
+                AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+
                 await ExecuteLoadThreads();
 
                 // Check operating hours after each page
@@ -260,13 +264,6 @@ namespace AIToady.Harvester.ViewModels
 
                 ThreadsToSkip = 0;
 
-                if (_stopAfterCurrentPage)
-                {
-                    hasNextForumPage = false;
-                    AddLogEntry("Stopping after current page as requested");
-                    break;
-                }
-
                 await LoadForumPage();
                     
                 hasNextForumPage = await LoadNextForumPage();
@@ -276,19 +273,28 @@ namespace AIToady.Harvester.ViewModels
                     await Task.Delay(GetRandomizedDelay());
                     Url = await InvokeExecuteScriptRequested("window.location.href");
                     Url = JsonSerializer.Deserialize<string>(Url);
-                    AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
                     SaveSettings();
+                }
 
+                if (_stopAfterCurrentPage)
+                {
+                    hasNextForumPage = false;
+                    AddLogEntry("Stopping after current page as requested");
+                    break;
                 }
             }
 
             if (_isHarvesting)
-            {
-                MessageBox.Show($"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-            }
+                StopHarvesting();
         }
+
+        private void StopHarvesting()
+        {
+            _isHarvesting = false;
+            HarvestingButtonText = "Start Harvesting";
+            MessageBox.Show(Application.Current.MainWindow, $"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         protected async Task<ForumThread> HarvestThread(string threadUrl)
         {
             _threadImageCounter = 1;
@@ -599,17 +605,17 @@ namespace AIToady.Harvester.ViewModels
                                 _threadImageCounter++;
                             }
                         }
-                        else if (result.Contains("failed to respond") || result.Contains("no data") || result.Contains("403") || result.Contains("404"))
+                        else if (result.IsUnavailableError())
                         {
                             AddLogEntry($"Failed to find image {imageUrl}, skipping");
                         }
-                        else if (result.Contains("error occurred while sending the request") || result.Contains("such host is known") || result.Contains("SSL") || result.Contains("441") || result.Contains("504") || result.Contains("522"))
+                        else if (result.IsTimeoutError())
                         {
                             AddLogEntry($"Image timeout {imageUrl}, skipping");
                             if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
                             {
-                                _badDomains.Add(failedUri.Host);
-                                AddLogEntry($"Added {failedUri.Host} to bad domains list");
+                                _badDomains.Add(failedUri.Host.GetRootDomain());
+                                AddLogEntry($"Added {failedUri.Host.GetRootDomain()} to bad domains list");
                             }
                         }
                         else
@@ -848,6 +854,10 @@ namespace AIToady.Harvester.ViewModels
         {                        // Generate random filename for Google Photos URLs
             if (attachmentUrl.Contains("googleusercontent.com"))
                 return $"google_photo_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+
+            // Strip query parameters
+            if (attachmentUrl.Contains("attachment.php"))
+                return $"attachment_{Guid.NewGuid().ToString("N")[..8]}.jpg";
 
             // Strip query parameters
             if (attachmentUrl.Contains("?"))

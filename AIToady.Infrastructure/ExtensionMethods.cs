@@ -1,0 +1,24 @@
+namespace AIToady.Infrastructure
+{
+    public static class ExtensionMethods
+    {
+        public static bool IsUnavailableError(this string message)
+        {
+            return message.Contains("400") || message.Contains("410") || message.Contains("443") || message.Contains("failed to respond") || 
+                   message.Contains("no data") || message.Contains("403") || message.Contains("404");
+        }
+
+        public static bool IsTimeoutError(this string message)
+        {
+            return message.Contains("error occurred while sending the request") || message.Contains("such host is known") || 
+                   message.Contains("SSL") || message.Contains("441") || message.Contains("502") || message.Contains("503") || 
+                   message.Contains("504") || message.Contains("522");
+        }
+
+        public static string GetRootDomain(this string host)
+        {
+            var parts = host.Split('.');
+            return parts.Length >= 2 ? string.Join(".", parts.TakeLast(2)) : host;
+        }
+    }
+}

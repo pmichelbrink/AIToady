@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="AIToady.Harvester/AIToady.Harvester.csproj" />
+  <Project Path="AIToady.Infrastructure/AIToady.Infrastructure.csproj" Id="5fb0dd64-92f5-4c8c-b216-9fde6dda4dcd" />
 </Solution>

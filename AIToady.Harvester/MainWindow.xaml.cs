@@ -1,4 +1,5 @@
 using AIToady.Harvester.ViewModels;
+using AIToady.Infrastructure;
 using System;
 using System.IO;
 using System.Linq;
@@ -177,7 +178,7 @@ namespace AIToady.Harvester
                             result = result.Trim('"');
                             imageBytes = Convert.FromBase64String(result);
                         }
-                        else return "failure";
+                        else return "404";
                     }
 
                     await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
@@ -188,10 +189,8 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.Contains("failed to respond") || ex.Message.Contains("no data") || ex.Message.Contains("error occurred while sending the request") || ex.Message.Contains("such host is known") || ex.Message.Contains("SSL") || ex.Message.Contains("403") || ex.Message.Contains("404") || ex.Message.Contains("441") || ex.Message.Contains("504") || ex.Message.Contains("522"))
-                    {
+                    if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
                         return ex.Message;
-                    }
 
                     string currentUrl = WebView.Source?.ToString();
                     WebView.Source = new Uri(imageUrl);
