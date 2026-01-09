@@ -17,7 +17,7 @@ export default function QueryPage() {
           <div style={{ fontSize: '22px', marginBottom: '1rem' }}>
             Stop right there!
           </div>
-          <div style={{ fontSize: '13px' }}>
+          <div style={{ fontSize: '13px', margin: '0 2rem' }}>
             We're still working on this. We'll know more about <strong>{query}</strong> in a little bit.
           </div>
         </div>
