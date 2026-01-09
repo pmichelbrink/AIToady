@@ -13,7 +13,7 @@ namespace AIToady.Infrastructure
         {
             return message.Contains("error occurred while sending the request") || message.Contains("such host is known") || 
                    message.Contains("SSL") || message.Contains("441") || message.Contains("502") || message.Contains("503") || 
-                   message.Contains("504") || message.Contains("521") || message.Contains("522");
+                   message.Contains("504") || message.Contains("521") || message.Contains("522") || message.Contains("526") || message.Contains("530");
         }
 
         public static string GetRootDomain(this string host)

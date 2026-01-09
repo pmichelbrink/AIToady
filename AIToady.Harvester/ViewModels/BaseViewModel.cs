@@ -616,7 +616,7 @@ namespace AIToady.Harvester.ViewModels
                             if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
                             {
                                 _badDomains.Add(failedUri.Host.GetRootDomain());
-                                AddLogEntry($"Added {failedUri.Host.GetRootDomain()} to bad domains list");
+                                AddLogEntry($"Added {failedUri.Host} to bad domains list");
                             }
                         }
                         else
