@@ -141,6 +141,18 @@ namespace AIToady.Harvester
                     var userAgent = await WebView.ExecuteScriptAsync("navigator.userAgent");
                     userAgent = userAgent.Trim('"');
                     httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                    
+                    // Add Referer header to mimic browser behavior
+                    string currentUrl = WebView.Source?.ToString();
+                    if (!string.IsNullOrEmpty(currentUrl))
+                    {
+                        httpClient.DefaultRequestHeaders.Add("Referer", currentUrl);
+                    }
+                    
+                    // Add other common browser headers
+                    httpClient.DefaultRequestHeaders.Add("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
+                    httpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+                    httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
 
                     var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
 
@@ -149,7 +161,7 @@ namespace AIToady.Harvester
                     if (content.Contains("<html>") || content.Contains("<HTML>"))
                     {
                         // Use WebView2 navigation for captcha pages
-                        string currentUrl = WebView.Source?.ToString();
+                        currentUrl = WebView.Source?.ToString();
                         WebView.Source = new Uri(imageUrl);
                         await Task.Delay(2000);
 
