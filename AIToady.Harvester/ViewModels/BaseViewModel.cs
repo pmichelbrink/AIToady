@@ -1,5 +1,6 @@
 using AIToady.Harvester.Models;
 using AIToady.Infrastructure;
+using AIToady.Infrastructure.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -52,6 +53,8 @@ namespace AIToady.Harvester.ViewModels
         protected int _threadImageCounter = 1;
         protected string _threadName;
         protected System.Timers.Timer _operatingHoursTimer;
+        protected ConnectionMonitor _connectionMonitor;
+        protected bool _pausedForConnection = false;
         public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
@@ -252,6 +255,8 @@ namespace AIToady.Harvester.ViewModels
                 // Process all threads on current page
                 for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
                 {
+                    await CheckInternetConnection();
+
                     AddLogEntry(_threadLinks[i]);
                     var thread = await HarvestThread(_threadLinks[i]);
                     await WriteThreadInfo(thread);
@@ -266,7 +271,7 @@ namespace AIToady.Harvester.ViewModels
                 ThreadsToSkip = 0;
 
                 await LoadForumPage();
-                    
+
                 hasNextForumPage = await LoadNextForumPage();
 
                 if (hasNextForumPage)
@@ -287,6 +292,25 @@ namespace AIToady.Harvester.ViewModels
 
             if (_isHarvesting)
                 StopHarvesting();
+        }
+
+        private async Task CheckInternetConnection()
+        {
+            while (_isHarvesting && !_connectionMonitor.IsConnected)
+            {
+                if (!_pausedForConnection)
+                {
+                    _pausedForConnection = true;
+                    AddLogEntry("Internet connection lost - pausing harvesting");
+                }
+                await Task.Delay(1000);
+            }
+
+            if (_pausedForConnection && _connectionMonitor.IsConnected)
+            {
+                _pausedForConnection = false;
+                AddLogEntry("Internet connection restored - resuming harvesting");
+            }
         }
 
         private void StopHarvesting()
@@ -691,6 +715,7 @@ namespace AIToady.Harvester.ViewModels
             StartHarvestingCommand = new RelayCommand(ExecuteStartHarvesting, () => !_isHarvesting || _threadLinks.Count > 0);
 
             InitializeOperatingHoursTimer();
+            InitializeConnectionMonitor();
         }
         public int GetRandomizedDelay()
         {
@@ -999,10 +1024,19 @@ namespace AIToady.Harvester.ViewModels
             return newViewModel;
         }
 
+        private void InitializeConnectionMonitor()
+        {
+            _connectionMonitor = new ConnectionMonitor();
+            _connectionMonitor.ConnectionLost += () => AddLogEntry("Connection lost - harvesting will pause");
+            _connectionMonitor.ConnectionRestored += () => AddLogEntry("Connection restored");
+            _connectionMonitor.Start();
+        }
+
         public void Dispose()
         {
             _operatingHoursTimer?.Stop();
             _operatingHoursTimer?.Dispose();
+            _connectionMonitor?.Stop();
         }
     }
 }
