@@ -212,25 +212,14 @@
             <TextBox Grid.Column="3"
                      Height="25"
                      MinWidth="80"
-                     VerticalContentAlignment="Center" Text="{Binding ForumName}" Margin="0,0,10,0"/>
-            <Label Grid.Column="4"
-                   Content="Next Element:"
-                   Width="80"
-                   VerticalAlignment="Center" />
-            <TextBox Grid.Column="5"
-                     x:Name="NextElementTextBox"
-                     Width="80"
-                     Height="25"
                      VerticalContentAlignment="Center"
-                     Text="{Binding NextElement}"
-                     GotFocus="NextElementTextBox_GotFocus"
-                     LostFocus="NextElementTextBox_LostFocus"
+                     Text="{Binding ForumName}"
                      Margin="0,0,10,0" />
-            <Label Grid.Column="6"
+            <Label Grid.Column="4"
                    Content="Thread Element:"
                    Width="100"
                    VerticalAlignment="Center" />
-            <TextBox Grid.Column="7"
+            <TextBox Grid.Column="5"
                      x:Name="ThreadElementTextBox"
                      Width="80"
                      Height="25"
@@ -239,6 +228,25 @@
                      GotFocus="ThreadElementTextBox_GotFocus"
                      LostFocus="ThreadElementTextBox_LostFocus"
                      Margin="0,0,10,0" />
+            <Label Grid.Column="6"
+                   Content="Email Account:"
+                   VerticalAlignment="Center" />
+            <TextBox Grid.Column="7"
+                     Width="120"
+                     Height="25"
+                     VerticalContentAlignment="Center"
+                     Text="{Binding EmailAccount}"
+                     Margin="0,0,10,0" />
+            <Label Grid.Column="8"
+                   Content="Email Password:"
+                   VerticalAlignment="Center" />
+            <PasswordBox Grid.Column="9"
+                         x:Name="EmailPasswordBox"
+                         Width="100"
+                         Height="25"
+                         VerticalContentAlignment="Center"
+                         PasswordChanged="EmailPasswordBox_PasswordChanged"
+                         Margin="0,0,10,0" />
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="4" Margin="5"/>

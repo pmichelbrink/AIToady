@@ -54,12 +54,15 @@ namespace AIToady.Harvester.ViewModels
         protected string _threadName;
         protected System.Timers.Timer _operatingHoursTimer;
         protected ConnectionMonitor _connectionMonitor;
+        protected string _emailAccount = "";
+        protected string _emailPassword = "";
         protected bool _pausedForConnection = false;
         public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
         public event Action ViewModelSwitchRequested;
+        EmailService _emailService;
 
         protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
         protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
@@ -189,6 +192,18 @@ namespace AIToady.Harvester.ViewModels
 
         public List<string> ThreadLinks => _threadLinks;
 
+        public string EmailAccount
+        {
+            get => _emailAccount;
+            set => SetProperty(ref _emailAccount, value);
+        }
+
+        public string EmailPassword
+        {
+            get => _emailPassword;
+            set => SetProperty(ref _emailPassword, value);
+        }
+
         public ICommand GoCommand { get; protected set; }
         public ICommand NextCommand { get; protected set; }
         public ICommand LoadThreadsCommand { get; protected set; }
@@ -233,6 +248,8 @@ namespace AIToady.Harvester.ViewModels
                 HarvestingButtonText = "Start Harvesting";
                 return;
             }
+
+            _emailService = new EmailService(EmailAccount, EmailPassword);
 
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
@@ -645,7 +662,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-
+                            await _emailService.SendEmailAsync("Test@gmail.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
                     catch (TaskCanceledException)
@@ -742,6 +759,8 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.ImageElement = ImageElement;
             Properties.Settings.Default.AttachmentElement = AttachmentElement;
             Properties.Settings.Default.HoursOfOperationEnabled = HoursOfOperationEnabled;
+            Properties.Settings.Default.EmailAccount = EmailAccount;
+            Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Save();
         }
 
@@ -789,6 +808,8 @@ namespace AIToady.Harvester.ViewModels
             ImageElement = Properties.Settings.Default.ImageElement ?? "";
             AttachmentElement = Properties.Settings.Default.AttachmentElement ?? "";
             HoursOfOperationEnabled = Properties.Settings.Default.HoursOfOperationEnabled;
+            EmailAccount = Properties.Settings.Default.EmailAccount ?? "";
+            EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
         }
         public void InitializeOperatingHoursTimer()
         {

@@ -59,6 +59,9 @@ namespace AIToady.Harvester
             Height = Properties.Settings.Default.WindowHeight;
             Left = Properties.Settings.Default.WindowLeft;
             Top = Properties.Settings.Default.WindowTop;
+            
+            // Set password box value after loading settings
+            EmailPasswordBox.Password = _viewModel.EmailPassword;
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -443,6 +446,12 @@ namespace AIToady.Harvester
             
             var direction = ascending ? System.ComponentModel.ListSortDirection.Ascending : System.ComponentModel.ListSortDirection.Descending;
             view.SortDescriptions.Add(new System.ComponentModel.SortDescription(columnName, direction));
+        }
+
+        private void EmailPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            var passwordBox = sender as PasswordBox;
+            _viewModel.EmailPassword = passwordBox?.Password ?? "";
         }
     }
 }

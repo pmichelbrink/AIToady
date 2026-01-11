@@ -228,6 +228,40 @@ namespace AIToady.Harvester.Properties {
             }
         }
 
-        public bool HoursOfOperationEnabled { get; internal set; }
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool HoursOfOperationEnabled {
+            get {
+                return ((bool)(this["HoursOfOperationEnabled"]));
+            }
+            set {
+                this["HoursOfOperationEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string EmailAccount {
+            get {
+                return ((string)(this["EmailAccount"]));
+            }
+            set {
+                this["EmailAccount"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string EmailPassword {
+            get {
+                return ((string)(this["EmailPassword"]));
+            }
+            set {
+                this["EmailPassword"] = value;
+            }
+        }
     }
 }
