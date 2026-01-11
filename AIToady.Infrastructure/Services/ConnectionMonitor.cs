@@ -6,8 +6,7 @@ namespace AIToady.Infrastructure.Services
 {
     public class ConnectionMonitor
     {
-        private bool _isConnected = true;
-        private System.Timers.Timer _connectionTimer;
+        private bool _isConnected = NetworkInterface.GetIsNetworkAvailable();
         
         public event Action ConnectionLost;
         public event Action ConnectionRestored;
@@ -16,45 +15,25 @@ namespace AIToady.Infrastructure.Services
         
         public void Start()
         {
-            _connectionTimer = new System.Timers.Timer(5000);
-            _connectionTimer.Elapsed += async (s, e) => await CheckConnection();
-            _connectionTimer.Start();
+            NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
         }
         
         public void Stop()
         {
-            _connectionTimer?.Stop();
-            _connectionTimer?.Dispose();
+            NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         }
         
-        private async Task CheckConnection()
+        private void OnNetworkAvailabilityChanged(object sender, NetworkAvailabilityEventArgs e)
         {
-            try
+            if (_isConnected && !e.IsAvailable)
             {
-                using (var ping = new Ping())
-                {
-                    var reply = await ping.SendPingAsync("8.8.8.8", 3000);
-                    bool connected = reply.Status == IPStatus.Success;
-                    
-                    if (_isConnected && !connected)
-                    {
-                        _isConnected = false;
-                        ConnectionLost?.Invoke();
-                    }
-                    else if (!_isConnected && connected)
-                    {
-                        _isConnected = true;
-                        ConnectionRestored?.Invoke();
-                    }
-                }
+                _isConnected = false;
+                ConnectionLost?.Invoke();
             }
-            catch
+            else if (!_isConnected && e.IsAvailable)
             {
-                if (_isConnected)
-                {
-                    _isConnected = false;
-                    ConnectionLost?.Invoke();
-                }
+                _isConnected = true;
+                ConnectionRestored?.Invoke();
             }
         }
     }
