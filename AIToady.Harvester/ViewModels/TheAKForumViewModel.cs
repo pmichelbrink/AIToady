@@ -39,10 +39,14 @@ namespace AIToady.Harvester.ViewModels
             {
                 string script = @"
                     (function() {
-                        let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
-                        if (nextButton) {
-                            nextButton.click();
-                            return 'clicked';
+                        let nextButton = document.querySelector('.pageNav-jump--next');
+                        if (nextButton && nextButton.getAttribute('aria-disabled') !== 'true') {
+                            if (nextButton.tagName === 'A' && nextButton.href) {
+                                return nextButton.getAttribute('href');
+                            } else {
+                                nextButton.click();
+                                return 'clicked';
+                            }
                         }
                         return 'not_found';
                     })()
@@ -56,7 +60,22 @@ namespace AIToady.Harvester.ViewModels
                 }
 
                 result = JsonSerializer.Deserialize<string>(result);
-                return result == "clicked";
+                
+                if (result == "clicked")
+                {
+                    return true;
+                }
+                else if (result != "not_found")
+                {
+                    // It's a relative URL, construct full URL and navigate
+                    string currentUrl = await InvokeExecuteScriptRequested("window.location.origin");
+                    currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+                    string fullUrl = currentUrl + result;
+                    InvokeNavigateRequested(fullUrl);
+                    return true;
+                }
+                
+                return false;
             }
             catch (Exception ex)
             {
