@@ -7,7 +7,7 @@ namespace AIToady.Infrastructure
             return message.Contains("301") || message.Contains("400") || message.Contains("410") || message.Contains("429") ||
                    message.Contains("423") || message.Contains("443") || message.Contains("failed to respond") || 
                    message.Contains("no data") || message.Contains("403") || message.Contains("404") || message.Contains("409") || 
-                   message.Contains("415") || message.Contains("409") || message.Contains("500");
+                   message.Contains("415") || message.Contains("409") || message.Contains("432") || message.Contains("500");
         }
 
         public static bool IsTimeoutError(this string message)
