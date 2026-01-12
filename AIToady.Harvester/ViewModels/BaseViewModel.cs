@@ -564,6 +564,12 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
+                        if (imageUrl.Contains(";base64,"))
+                        {
+                            AddLogEntry($"Skipping base64 URL (I haven't found a valid one yet)");
+                            continue;
+                        }
+
                         // Handle photobucket BBCode format
                         if (imageUrl.Contains("[IMG]"))
                         {
