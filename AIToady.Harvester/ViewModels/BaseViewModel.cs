@@ -44,7 +44,7 @@ namespace AIToady.Harvester.ViewModels
             "fearlessmen.com", "allbackgrounds.com", "freeimagehosting.net",
             "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", 
             "funnywebsite.com", "weaponarts.com", "bing.net", "sightpusher.com",
-            "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com"
+            "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -563,6 +563,12 @@ namespace AIToady.Harvester.ViewModels
                     try
                     {
                         string imageUrl = message.Images[i];
+
+                        if (imageUrl.EndsWith(".php"))
+                        {
+                            AddLogEntry($"Skipping PHP URL {imageUrl}");
+                            continue;
+                        }
 
                         if (imageUrl.Contains(";base64,"))
                         {

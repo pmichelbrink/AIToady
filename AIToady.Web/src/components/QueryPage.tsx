@@ -5,7 +5,7 @@ export default function QueryPage() {
   const query = searchParams.get('q') || '';
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
+    <>
       <Link to="/" style={{ position: 'absolute', top: '20px', left: '20px', textDecoration: 'none', color: 'inherit', fontSize: '24px', fontWeight: 'bold' }}>
         AI Toady
       </Link>
@@ -22,6 +22,6 @@ export default function QueryPage() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
