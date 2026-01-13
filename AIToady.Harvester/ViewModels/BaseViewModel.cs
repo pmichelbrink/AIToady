@@ -564,6 +564,12 @@ namespace AIToady.Harvester.ViewModels
                     {
                         string imageUrl = message.Images[i];
 
+                        if (imageUrl.EndsWith(".php"))
+                        {
+                            AddLogEntry($"Skipping PHP URL {imageUrl}");
+                            continue;
+                        }
+
                         if (imageUrl.Contains(";base64,"))
                         {
                             AddLogEntry($"Skipping base64 URL (I haven't found a valid one yet)");
