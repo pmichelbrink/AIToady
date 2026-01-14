@@ -1,4 +1,5 @@
-import { signUp, confirmSignUp, signIn } from 'aws-amplify/auth';
+import { signUp, confirmSignUp, signIn, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
+import { userService } from './userService';
 
 export interface SignUpData {
   email: string;
@@ -60,6 +61,7 @@ export const authService = {
         username,
         confirmationCode
       });
+      
       return { success: true, message: 'Account confirmed successfully!' };
     } catch (error: any) {
       return { success: false, error: error.message || 'Confirmation failed' };
@@ -75,6 +77,28 @@ export const authService = {
       return { success: true, isSignedIn, nextStep };
     } catch (error: any) {
       return { success: false, error: error.message || 'Sign in failed' };
+    }
+  },
+
+  async resetPassword(email: string) {
+    try {
+      await resetPassword({ username: email });
+      return { success: true, message: 'Password reset code sent to your email' };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Password reset failed' };
+    }
+  },
+
+  async confirmResetPassword(email: string, confirmationCode: string, newPassword: string) {
+    try {
+      await confirmResetPassword({
+        username: email,
+        confirmationCode,
+        newPassword
+      });
+      return { success: true, message: 'Password reset successfully!' };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Password reset confirmation failed' };
     }
   }
 };

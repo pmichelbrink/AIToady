@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { userService } from '../services/userService';
+import { UserContext } from '../contexts/UserContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,20 +14,33 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isAuthPage = location.pathname === '/auth';
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [queriesRemaining, setQueriesRemaining] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       const result = await authService.getCurrentUser();
       if (result.success && result.user?.signInDetails?.loginId) {
-        setUserEmail(result.user.signInDetails.loginId);
-        localStorage.setItem('userEmail', result.user.signInDetails.loginId);
+        const email = result.user.signInDetails.loginId;
+        setUserEmail(email);
+        localStorage.setItem('userEmail', email);
+        
+        // Get user data from DynamoDB
+        try {
+          const userResult = await userService.getUser(result.user.username);
+          if (userResult.success && userResult.user) {
+            setQueriesRemaining(userResult.user.queriesRemaining);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user data:', error);
+        }
       } else {
         const storedEmail = localStorage.getItem('userEmail');
         if (storedEmail) {
           localStorage.removeItem('userEmail');
         }
         setUserEmail(null);
+        setQueriesRemaining(null);
       }
     };
     
@@ -53,7 +68,8 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
+    <UserContext.Provider value={{ userEmail, queriesRemaining }}>
+      <div style={{ position: 'relative', minHeight: '100vh' }}>
       {!isAuthPage && (
         userEmail ? (
           <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
@@ -64,7 +80,10 @@ export default function Layout({ children }: LayoutProps) {
               {userEmail.charAt(0).toUpperCase()}
             </button>
             {showDropdown && (
-              <div style={{ position: 'absolute', top: '50px', right: '0', backgroundColor: '#2d2d2d', border: '1px solid #555', borderRadius: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', minWidth: '120px', zIndex: 1000 }}>
+              <div style={{ position: 'absolute', top: '50px', right: '0', backgroundColor: '#2d2d2d', border: '1px solid #555', borderRadius: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', minWidth: '160px', zIndex: 1000 }}>
+                <div style={{ padding: '8px 16px', borderBottom: '1px solid #555', color: '#ccc', fontSize: '12px' }}>
+                  Queries remaining: {queriesRemaining ?? 'Loading...'}
+                </div>
                 <button
                   onClick={handleSignOut}
                   style={{ width: '100%', padding: '8px 16px', border: 'none', backgroundColor: 'transparent', color: 'white', textAlign: 'left', cursor: 'pointer', fontSize: '14px' }}
@@ -97,7 +116,8 @@ export default function Layout({ children }: LayoutProps) {
           </button>
         )
       )}
-      {children}
-    </div>
+        {children}
+      </div>
+    </UserContext.Provider>
   );
 }
