@@ -122,12 +122,13 @@
                      Text="{Binding RootFolder}"
                      Margin="0,0,5,0" />
             <Button Grid.Column="6"
-                    Content="Browse"
-                    Width="60"
+                    Content="..."
+                    VerticalContentAlignment="Center"
+                    Width="25"
                     Height="25"
                     Click="BrowseButton_Click" />
             <Label Grid.Column="7"
-                   Margin="10,0,0,0"
+                   Margin="5,0,0,0"
                    Content="Page Load Delay (seconds):"
                    VerticalAlignment="Center" />
             <TextBox Grid.Column="8"
@@ -138,7 +139,6 @@
                      Text="{Binding PageLoadDelay}"
                      PreviewTextInput="PageLoadDelayTextBox_PreviewTextInput"
                      Margin="0,0,10,0" />
-
             <CheckBox Grid.Column="9"
                       Content="Stop After Current Page"
                       IsChecked="{Binding StopAfterCurrentPage}"

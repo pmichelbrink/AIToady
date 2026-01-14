@@ -805,14 +805,14 @@ namespace AIToady.Harvester.ViewModels
         {
             LoadBadDomains();
 
-            Url = string.IsNullOrEmpty(Properties.Settings.Default.Url) ? "akfiles.com" : Properties.Settings.Default.Url;
+            Url = Properties.Settings.Default.Url;
             NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
-            ThreadElement = Properties.Settings.Default.ThreadElement;
+            ThreadElement = string.IsNullOrEmpty(Properties.Settings.Default.ThreadElement) ? "structItem-title" : Properties.Settings.Default.ThreadElement;
             ThreadsToSkip = Properties.Settings.Default.ThreadsToSkip;
             PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 6 : Properties.Settings.Default.PageLoadDelay;
             RootFolder = string.IsNullOrEmpty(Properties.Settings.Default.RootFolder) ? GetDriveWithMostFreeSpace() : Properties.Settings.Default.RootFolder;
             StartTime = string.IsNullOrEmpty(Properties.Settings.Default.StartTime) ? "09:00" : Properties.Settings.Default.StartTime;
-            EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "17:00" : Properties.Settings.Default.EndTime;
+            EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "23:59" : Properties.Settings.Default.EndTime;
             SkipExistingThreads = Properties.Settings.Default.SkipExistingThreads;
             SiteName = Properties.Settings.Default.SiteName ?? "";
             ForumName = Properties.Settings.Default.ForumName ?? "";
