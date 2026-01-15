@@ -1,8 +1,19 @@
 import { useSearchParams, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useUser } from '../contexts/UserContext';
 
 export default function QueryPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
+  const { showToast } = useUser();
+
+  useEffect(() => {
+    const stored = localStorage.getItem('queriesRemaining');
+    if (stored) {
+      const remaining = parseInt(stored, 10);
+      showToast(`You have ${remaining} queries remaining.`);
+    }
+  }, []);
 
   return (
     <>
@@ -16,9 +27,6 @@ export default function QueryPage() {
         <div style={{ textAlign: 'center', maxWidth: '600px'}}>
           <div style={{ fontSize: '22px', marginBottom: '1rem' }}>
             Stop right there!
-          </div>
-          <div style={{ fontSize: '13px', margin: '0 2rem' }}>
-            We're still working on this. We'll know more about <strong>{query}</strong> in a little bit.
           </div>
         </div>
       </div>
