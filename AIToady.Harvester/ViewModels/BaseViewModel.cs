@@ -386,16 +386,6 @@ namespace AIToady.Harvester.ViewModels
                 // Extract images and attachments for each message
                 await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
 
-                string imagePath = Path.Combine(threadFolder, "Images");
-                if (Directory.Exists(imagePath) && Directory.GetFiles(imagePath).Count() == 0)
-                {
-                    try
-                    {
-                        Directory.Delete(imagePath);
-                    }
-                    catch { }
-                }    
-
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
                 bool nextPageExists = await CheckIfNextPageExists();
@@ -654,7 +644,8 @@ namespace AIToady.Harvester.ViewModels
                         if (!System.IO.Directory.Exists(imagesFolder))
                             System.IO.Directory.CreateDirectory(imagesFolder);
 
-                        string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                        string imagePath = Path.Combine(imagesFolder, fileName);
+
                         string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
 
                         if (File.Exists(imagePath))
@@ -907,6 +898,16 @@ namespace AIToady.Harvester.ViewModels
                 string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
                 string fileName = System.IO.Path.Combine(threadFolder, "thread.json");
                 await System.IO.File.WriteAllTextAsync(fileName, json);
+
+                string imagePath = Path.Combine(threadFolder, "Images");
+                if (Directory.Exists(imagePath) && Directory.GetFiles(imagePath).Count() == 0)
+                {
+                    try
+                    {
+                        Directory.Delete(imagePath);
+                    }
+                    catch { }
+                }
             }
         }
         private bool IsHtmlFile(string filePath)
@@ -974,6 +975,7 @@ namespace AIToady.Harvester.ViewModels
                 }
             }
 
+            fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
             return fileName;
         }
 
