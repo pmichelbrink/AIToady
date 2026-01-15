@@ -654,7 +654,9 @@ namespace AIToady.Harvester.ViewModels
                         if (!System.IO.Directory.Exists(imagesFolder))
                             System.IO.Directory.CreateDirectory(imagesFolder);
 
-                        string imagePath = System.IO.Path.Combine(imagesFolder, fileName);
+                        string imagePath = Path.Combine(imagesFolder, fileName);
+                        imagePath = string.Join("_", imagePath.Split(Path.GetInvalidFileNameChars()));
+
                         string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
 
                         if (File.Exists(imagePath))
