@@ -976,6 +976,7 @@ namespace AIToady.Harvester.ViewModels
                 }
             }
 
+            fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
             return fileName;
         }
 
