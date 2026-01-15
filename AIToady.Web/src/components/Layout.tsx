@@ -27,7 +27,7 @@ export default function Layout({ children }: LayoutProps) {
         
         // Get user data from DynamoDB
         try {
-          const userResult = await userService.getUser(result.user.username);
+          const userResult = await userService.getUser();
           if (userResult.success && userResult.user) {
             setQueriesRemaining(userResult.user.queriesRemaining);
           }

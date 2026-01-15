@@ -1,12 +1,29 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
 
-export const handler = async (event) => {
-    console.log('Event:', JSON.stringify(event, null, 2));
-    
+const jwks = jwksClient({
+    jwksUri: `https://cognito-idp.${process.env.AWS_REGION}.amazonaws.com/${process.env.USER_POOL_ID}/.well-known/jwks.json`
+});
+
+const verifyToken = async (token) => {
+    try {
+        const decoded = jwt.decode(token, { complete: true });
+        const kid = decoded.header.kid;
+        const key = await jwks.getSigningKey(kid);
+        const signingKey = key.getPublicKey();
+        
+        return jwt.verify(token, signingKey, { algorithms: ['RS256'] });
+    } catch (error) {
+        throw new Error('Invalid token');
+    }
+};
+
+exports.handler = async (event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
@@ -18,18 +35,23 @@ export const handler = async (event) => {
     }
 
     try {
-        console.log('Path parameters:', event.pathParameters);
-        const userId = event.pathParameters?.userId;
-        console.log('Extracted userId:', userId);
+        // Verify JWT token
+        const authHeader = event.headers?.Authorization || event.headers?.authorization;
         
-        if (!userId) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return {
-                statusCode: 400,
+                statusCode: 401,
                 headers,
-                body: JSON.stringify({ error: 'userId is required' })
+                body: JSON.stringify({ error: 'Missing or invalid authorization header' })
             };
         }
 
+        const token = authHeader.substring(7);
+        const decoded = await verifyToken(token);
+        
+        // Use the username from JWT token (this matches our database userId)
+        const userId = decoded['cognito:username'] || decoded.username;
+        
         const result = await docClient.send(new GetCommand({
             TableName: process.env.USERS_TABLE_NAME || 'AIToadyUsers',
             Key: { userId }
