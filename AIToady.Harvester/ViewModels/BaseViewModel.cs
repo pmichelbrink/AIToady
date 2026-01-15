@@ -385,6 +385,16 @@ namespace AIToady.Harvester.ViewModels
                 // Extract images and attachments for each message
                 await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
 
+                string imagePath = Path.Combine(threadFolder, "Images");
+                if (Directory.Exists(imagePath) && Directory.GetFiles(imagePath).Count() == 0)
+                {
+                    try
+                    {
+                        Directory.Delete(imagePath);
+                    }
+                    catch { }
+                }    
+
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
                 bool nextPageExists = await CheckIfNextPageExists();
