@@ -18,7 +18,7 @@ export const handler = async (event) => {
             Item: {
                 userId: userName,
                 email: email,
-                queriesRemaining: 0,
+                queriesRemaining: 10,
                 createdAt: now,
                 updatedAt: now
             },
