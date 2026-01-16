@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="Url" Type="System.String" Scope="User">
-      <Value Profile="(Default)">akfiles.com</Value>
+      <Value Profile="(Default)"></Value>
     </Setting>
     <Setting Name="NextElement" Type="System.String" Scope="User">
       <Value Profile="(Default)">.pageNav-jump--next</Value>
