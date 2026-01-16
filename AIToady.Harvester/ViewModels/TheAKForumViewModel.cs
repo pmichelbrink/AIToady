@@ -44,7 +44,7 @@ namespace AIToady.Harvester.ViewModels
                             if (nextButton.tagName === 'A' && nextButton.href) {
                                 return nextButton.getAttribute('href');
                             } else {
-                                nextButton.click();
+                                nextButton.click(); 
                                 return 'clicked';
                             }
                         }
@@ -60,22 +60,24 @@ namespace AIToady.Harvester.ViewModels
                 }
 
                 result = JsonSerializer.Deserialize<string>(result);
-                
+
                 if (result == "clicked")
                 {
                     return true;
                 }
-                else if (result != "not_found")
+                else if (result == "not_found")
                 {
-                    // It's a relative URL, construct full URL and navigate
+                    return false;
+                }
+                else
+                {
+                    // It's a link URL, construct full URL and navigate
                     string currentUrl = await InvokeExecuteScriptRequested("window.location.origin");
                     currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
                     string fullUrl = currentUrl + result;
                     InvokeNavigateRequested(fullUrl);
                     return true;
                 }
-                
-                return false;
             }
             catch (Exception ex)
             {
