@@ -135,9 +135,15 @@ export default function Layout({ children }: LayoutProps) {
             </button>
             {showDropdown && (
               <div style={{ position: 'absolute', top: '50px', right: '0', backgroundColor: '#2d2d2d', border: '1px solid #555', borderRadius: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', minWidth: '160px', zIndex: 1000, animation: 'dropdownFadeIn 0.2s ease-out', transformOrigin: 'top right', whiteSpace: 'nowrap' }}>
-                <div style={{ padding: '8px 16px', borderBottom: '1px solid #555', color: '#ccc', fontSize: '12px' }}>
+                <div style={{ padding: '8px 16px', color: '#ccc', fontSize: '12px' }}>
                   Queries remaining: {queriesRemaining ?? 'Loading...'}
                 </div>
+                <a
+                  href="mailto:admin@aitoady.com?subject=Please Sir, I Want Some More Queries"
+                  style={{ display: 'block', padding: '0px 16px 8px 16px', borderBottom: '1px solid #555', color: '#1976d2', fontSize: '12px', textDecoration: 'none' }}
+                >
+                  Request more queries
+                </a>
                 <div style={{ padding: '8px 16px 1px 16px', color: '#ccc', fontSize: '12px' }}>
                   Signed in as {userEmail}
                 </div>

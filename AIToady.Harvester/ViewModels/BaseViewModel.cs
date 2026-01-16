@@ -290,7 +290,7 @@ namespace AIToady.Harvester.ViewModels
 
                 await LoadForumPage();
 
-                hasNextForumPage = await LoadNextForumPage();
+                hasNextForumPage = await CheckIfNextPageExists();
 
                 if (hasNextForumPage)
                 {

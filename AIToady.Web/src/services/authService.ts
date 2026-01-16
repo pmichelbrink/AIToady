@@ -1,5 +1,4 @@
 import { signUp, confirmSignUp, signIn, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
-import { userService } from './userService';
 
 export interface SignUpData {
   email: string;

@@ -1,11 +1,19 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUser } from '../contexts/UserContext';
 
 export default function QueryPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const { showToast } = useUser();
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  const messages = [
+    `So you want to know about ${query}?`,
+    'Sending your question to a Toady...',
+    'Finding the right Toady for the job...',
+    'Waiting on a response from your Toady...'
+  ];
 
   useEffect(() => {
     const stored = localStorage.getItem('queriesRemaining');
@@ -15,8 +23,24 @@ export default function QueryPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (messageIndex < messages.length - 1) {
+      const timeout = setTimeout(() => {
+        setMessageIndex((prev) => prev + 1);
+      }, 5000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [messageIndex, messages.length]);
+
   return (
     <>
+      <style>{`
+        @keyframes fillProgress {
+          from { width: 0%; }
+          to { width: 90%; }
+        }
+      `}</style>
       <Link to="/" style={{ position: 'absolute', top: '20px', left: '20px', textDecoration: 'none', color: 'inherit', fontSize: '24px', fontWeight: 'bold' }}>
         AI Toady
       </Link>
@@ -25,8 +49,11 @@ export default function QueryPage() {
           <img src="/toady_with_hat.png" alt="Toady with Hat" style={{ height: '200px', objectFit: 'contain', backgroundColor: 'transparent', cursor: 'pointer' }} />
         </Link>
         <div style={{ textAlign: 'center', maxWidth: '600px'}}>
+          <div style={{ width: '300px', height: '8px', backgroundColor: '#555', borderRadius: '4px', margin: '0 auto 1rem', overflow: 'hidden' }}>
+            <div style={{ height: '100%', backgroundColor: '#1976d2', animation: 'fillProgress 30s ease-out forwards' }} />
+          </div>
           <div style={{ fontSize: '22px', marginBottom: '1rem' }}>
-            Stop right there!
+            {messages[messageIndex]}
           </div>
         </div>
       </div>
