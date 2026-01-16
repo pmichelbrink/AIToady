@@ -136,6 +136,67 @@ namespace AIToady.Harvester
 
         private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
         {
+            /*
+            try
+            {
+                // Try clicking image in current WebView2 page for attachment URLs
+                if (imageUrl.Contains("attachments"))
+                {
+                    string currentUrl = WebView.Source?.ToString();
+                    var parts = imageUrl.Split('/');
+                    var fileName = parts[parts.Length - 1];
+                    var attachmentId = fileName.Split('-')[0];
+                    
+                    string clickScript = $@"
+                        var imgs = document.querySelectorAll('img');
+                        var found = false;
+                        for (var i = 0; i < imgs.length; i++) {{
+                            var img = imgs[i];
+                            if ((img.src && img.src.includes('{attachmentId}')) || 
+                                (img.getAttribute('data-src') && img.getAttribute('data-src').includes('{attachmentId}'))) {{
+                                img.click();
+                                found = true;
+                                break;
+                            }}
+                        }}
+                        found;
+                    ";
+                    
+                    string clicked = await WebView.ExecuteScriptAsync(clickScript);
+                    if (clicked == "true")
+                    {
+                        await Task.Delay(1000);
+                        
+                        string script = @"
+                            var fullImg = document.querySelector('.lg-object.lg-image');
+                            if (fullImg && fullImg.complete) {
+                                var canvas = document.createElement('canvas');
+                                canvas.width = fullImg.naturalWidth || fullImg.width;
+                                canvas.height = fullImg.naturalHeight || fullImg.height;
+                                var ctx = canvas.getContext('2d');
+                                ctx.drawImage(fullImg, 0, 0);
+                                canvas.toDataURL().split(',')[1];
+                            } else null;
+                        ";
+                        
+                        string result = await WebView.ExecuteScriptAsync(script);
+                        
+                        // Navigate back to original URL
+                        if (!string.IsNullOrEmpty(currentUrl))
+                            WebView.Source = new Uri(currentUrl);
+                        
+                        if (!string.IsNullOrEmpty(result) && result != "null")
+                        {
+                            result = result.Trim('"');
+                            var imageBytes = Convert.FromBase64String(result);
+                            await File.WriteAllBytesAsync(filePath, imageBytes);
+                            return "success";
+                        }
+                    }
+                }
+            }
+            catch { }
+            */
             try
             {
                 // First try simple HttpClient approach
