@@ -43,11 +43,14 @@ export default function HomePage() {
     }
     
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Temporary delay to see animation
+
     const result = await queryService.createQuery(searchQuery);
+
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Temporary delay to see animation
+
     if (!result.success) {
       setIsSubmitting(false);
-      showToast('Failed to submit query. Please try again.');
+      showToast(result.error || 'Failed to submit query. Please try again.');
       return;
     }
     

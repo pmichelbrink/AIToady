@@ -1,5 +1,5 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
@@ -62,6 +62,39 @@ exports.handler = async (event) => {
             };
         }
 
+        // Check user's queries remaining
+        const userResult = await docClient.send(new GetCommand({
+            TableName: process.env.USERS_TABLE_NAME || 'AIToadyUsers',
+            Key: { userId }
+        }));
+
+        if (!userResult.Item) {
+            return {
+                statusCode: 404,
+                headers,
+                body: JSON.stringify({ error: 'User not found' })
+            };
+        }
+
+        if (userResult.Item.queriesRemaining <= 0) {
+            return {
+                statusCode: 403,
+                headers,
+                body: JSON.stringify({ error: 'No queries remaining' })
+            };
+        }
+
+        // Decrement queries remaining
+        await docClient.send(new UpdateCommand({
+            TableName: process.env.USERS_TABLE_NAME || 'AIToadyUsers',
+            Key: { userId },
+            UpdateExpression: 'SET queriesRemaining = queriesRemaining - :dec, updatedAt = :now',
+            ExpressionAttributeValues: {
+                ':dec': 1,
+                ':now': new Date().toISOString()
+            }
+        }));
+
         const queryId = `${userId}_${Date.now()}`;
         const timestamp = new Date().toISOString();
 
@@ -88,10 +121,11 @@ exports.handler = async (event) => {
         };
     } catch (error) {
         console.error('Error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ success: false, error: 'Internal server error' })
+            body: JSON.stringify({ success: false, error: error.message || 'Internal server error' })
         };
     }
 };
