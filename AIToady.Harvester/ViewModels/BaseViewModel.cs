@@ -661,18 +661,9 @@ namespace AIToady.Harvester.ViewModels
                                 _threadImageCounter++;
                             }
                         }
-                        else if (result.IsUnavailableError())
+                        else if (result.IsUnavailableError() || result.IsTimeoutError())
                         {
                             AddLogEntry($"Failed to find image {imageUrl}, skipping");
-                        }
-                        else if (result.IsTimeoutError())
-                        {
-                            AddLogEntry($"Image timeout {imageUrl}, skipping");
-                            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var failedUri))
-                            {
-                                _badDomains.Add(failedUri.Host);
-                                AddLogEntry($"Added {failedUri.Host} to bad domains list");
-                            }
                         }
                         else
                         {
