@@ -35,6 +35,8 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "The FAL Files";
                     }
                 }
+
+                Category = string.Empty;
             }
             catch { }
         }

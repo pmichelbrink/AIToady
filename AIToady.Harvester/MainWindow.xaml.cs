@@ -500,7 +500,7 @@ namespace AIToady.Harvester
 
             var stackPanel = new StackPanel { Margin = new Thickness(10) };
             var label = new Label { Content = prompt };
-            var textBox = new TextBox { Margin = new Thickness(0, 5, 0, 10) };
+            var textBox = new TextBox { Margin = new Thickness(0, 5, 0, 10), Text = _viewModel.Category };
             var button = new Button { Content = "OK", Width = 75, HorizontalAlignment = HorizontalAlignment.Right };
 
             button.Click += (s, e) => inputDialog.DialogResult = true;

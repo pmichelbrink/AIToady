@@ -29,6 +29,8 @@ namespace AIToady.Harvester.ViewModels
                     if (!string.IsNullOrEmpty(result))
                         ForumName = result;
                 }
+
+                Category = string.Empty;
             }
             catch { }
         }

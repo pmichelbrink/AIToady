@@ -59,6 +59,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _emailAccount = "";
         protected string _emailPassword = "";
         protected bool _pausedForConnection = false;
+        protected string _category = "";
         public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
@@ -90,7 +91,6 @@ namespace AIToady.Harvester.ViewModels
             get => _forumName;
             set => SetProperty(ref _forumName, value);
         }
-        public string Category { get; set; }
         public string MessageElement
         {
             get => _messageElement;
@@ -206,6 +206,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _emailPassword;
             set => SetProperty(ref _emailPassword, value);
+        }
+
+        public string Category
+        {
+            get => _category;
+            set => SetProperty(ref _category, value);
         }
 
         public ICommand GoCommand { get; protected set; }
@@ -786,6 +792,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.HoursOfOperationEnabled = HoursOfOperationEnabled;
             Properties.Settings.Default.EmailAccount = EmailAccount;
             Properties.Settings.Default.EmailPassword = EmailPassword;
+            Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.Save();
         }
 
@@ -835,6 +842,7 @@ namespace AIToady.Harvester.ViewModels
             HoursOfOperationEnabled = Properties.Settings.Default.HoursOfOperationEnabled;
             EmailAccount = Properties.Settings.Default.EmailAccount ?? "";
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
+            Category = Properties.Settings.Default.Category ?? "";
         }
         public void InitializeOperatingHoursTimer()
         {
@@ -883,7 +891,7 @@ namespace AIToady.Harvester.ViewModels
             {
                 try
                 {
-                    string forumFolder = Path.Combine(_rootFolder, SiteName, ForumName);
+                    string forumFolder = Path.Combine(_rootFolder, SiteName);
                     Directory.CreateDirectory(forumFolder);
                     string logFile = Path.Combine(forumFolder, "harvest.log");
                     File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
@@ -903,7 +911,7 @@ namespace AIToady.Harvester.ViewModels
                     message.Message = System.Text.RegularExpressions.Regex.Replace(message.Message ?? "", @"\s+", " ");
                 }
 
-                string threadFolder = System.IO.Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
+                string threadFolder = GetThreadFolder();
                 System.IO.Directory.CreateDirectory(threadFolder);
 
                 string json = JsonSerializer.Serialize(thread, new JsonSerializerOptions { WriteIndented = true });
@@ -1078,6 +1086,7 @@ namespace AIToady.Harvester.ViewModels
             newViewModel._skipExistingThreads = _skipExistingThreads;
             newViewModel._hoursOfOperationEnabled = _hoursOfOperationEnabled;
             newViewModel._badDomains = new HashSet<string>(_badDomains);
+            newViewModel._category = _category;
             return newViewModel;
         }
 

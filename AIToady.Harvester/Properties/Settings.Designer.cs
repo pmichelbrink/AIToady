@@ -263,5 +263,17 @@ namespace AIToady.Harvester.Properties {
                 this["EmailPassword"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Category {
+            get {
+                return ((string)(this["Category"]));
+            }
+            set {
+                this["Category"] = value;
+            }
+        }
     }
 }
