@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 
@@ -62,7 +63,7 @@ namespace AIToady.Harvester.ViewModels
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
-        public event Action ViewModelSwitchRequested;
+        public event Action<ViewModelType> ViewModelSwitchRequested;
         EmailService _emailService;
 
         protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
@@ -347,22 +348,9 @@ namespace AIToady.Harvester.ViewModels
 
             var thread = new ForumThread();
 
-            // Get thread name from page title
-            string titleScript = "document.title";
-            string titleResult = await InvokeExecuteScriptRequested(titleScript);
-            thread.ThreadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+            _threadName = await GetThreadName(threadUrl);
+            thread.ThreadName = _threadName;
 
-            _threadName = thread.ThreadName;
-
-            if (_threadName.Contains('|'))
-                _threadName = _threadName.Split('|')[0].Trim();
-
-            // Extract thread ID from URL and append to thread name
-            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
-            if (!string.IsNullOrEmpty(threadId))
-                _threadName += $"_{threadId}";
-
-            _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
             string threadFolder = Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
 
             // Check if thread folder exists and skip if SkipExistingThreads is true
@@ -390,6 +378,11 @@ namespace AIToady.Harvester.ViewModels
 
                 bool nextPageExists = await CheckIfNextPageExists();
 
+                if (_threadName.ToLower().Contains("newb needs help with"))
+                {
+
+                }
+
                 if (nextPageExists)
                 {
                     _threadPageNumber++;
@@ -412,6 +405,28 @@ namespace AIToady.Harvester.ViewModels
 
             return thread;
         }
+
+        protected virtual async Task<string> GetThreadName(string threadUrl)
+        {
+            // Get thread name from page title
+            string titleScript = "document.title";
+            string titleResult = await InvokeExecuteScriptRequested(titleScript);
+            _threadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+
+
+            if (_threadName.Contains('|'))
+                _threadName = _threadName.Split('|')[0].Trim();
+
+            // Extract thread ID from URL and append to thread name
+            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
+            if (!string.IsNullOrEmpty(threadId))
+                _threadName += $"_{threadId}";
+
+            _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+
+            return _threadName;
+        }
+
         private async Task<bool> LoadNextAKForumsPage()
         {
             string akNextScript = @"
@@ -458,12 +473,17 @@ namespace AIToady.Harvester.ViewModels
                     url = "https://" + url;
                 }
                 
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host.Contains("theakforum.net") && GetType() != typeof(TheAKForumViewModel))
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host.Contains("theakforum") && GetType() != typeof(TheAKForumViewModel))
                 {
-                    ViewModelSwitchRequested?.Invoke();
+                    ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.TheAKForum);
                     return;
                 }
-                
+                else if (Uri.TryCreate(url, UriKind.Absolute, out var arUri) && arUri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
+                {
+                    ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
+                    return;
+                }
+
                 NavigateRequested?.Invoke(url);
                 await Task.Delay(2000);
                 await ExtractForumName();
@@ -478,7 +498,7 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        public async Task ExecuteLoadThreads()
+        public virtual async Task ExecuteLoadThreads()
         {
             try
             {

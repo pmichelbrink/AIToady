@@ -12,6 +12,12 @@ using System.Windows.Input;
 
 namespace AIToady.Harvester
 {
+    public enum ViewModelType
+    {
+        TheAKForum,
+        AR15
+    }
+
     public partial class MainWindow : Window
     {
         private BaseViewModel _viewModel;
@@ -31,7 +37,7 @@ namespace AIToady.Harvester
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
-            _viewModel.ViewModelSwitchRequested += SwitchToTheAKForumViewModel;
+            _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
@@ -483,9 +489,14 @@ namespace AIToady.Harvester
         private string _lastSortColumn = "";
         private bool _lastSortAscending = true;
 
-        private void SwitchToTheAKForumViewModel()
+        private void SwitchViewModel(ViewModelType viewModelType)
         {
-            var newViewModel = _viewModel.CloneToViewModel<TheAKForumViewModel>();
+            BaseViewModel newViewModel;
+            if (viewModelType == ViewModelType.TheAKForum)
+                newViewModel = _viewModel.CloneToViewModel<TheAKForumViewModel>();
+            else
+                newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
+            
             _viewModel.Dispose();
             _viewModel = newViewModel;
             DataContext = _viewModel;
@@ -494,7 +505,7 @@ namespace AIToady.Harvester
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
-            _viewModel.ViewModelSwitchRequested += SwitchToTheAKForumViewModel;
+            _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             
             _viewModel.ExecuteGo();
         }
