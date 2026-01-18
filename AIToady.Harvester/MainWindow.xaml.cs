@@ -38,6 +38,7 @@ namespace AIToady.Harvester
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
+            _viewModel.PromptUserInputRequested += PromptUserForInput;
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
@@ -486,6 +487,34 @@ namespace AIToady.Harvester
             popup.IsOpen = true;
         }
 
+        private Task<string> PromptUserForInput(string prompt)
+        {
+            var inputDialog = new Window
+            {
+                Title = "Input Required",
+                Width = 300,
+                Height = 150,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this
+            };
+
+            var stackPanel = new StackPanel { Margin = new Thickness(10) };
+            var label = new Label { Content = prompt };
+            var textBox = new TextBox { Margin = new Thickness(0, 5, 0, 10) };
+            var button = new Button { Content = "OK", Width = 75, HorizontalAlignment = HorizontalAlignment.Right };
+
+            button.Click += (s, e) => inputDialog.DialogResult = true;
+            textBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) inputDialog.DialogResult = true; };
+
+            stackPanel.Children.Add(label);
+            stackPanel.Children.Add(textBox);
+            stackPanel.Children.Add(button);
+            inputDialog.Content = stackPanel;
+
+            textBox.Focus();
+            return Task.FromResult(inputDialog.ShowDialog() == true ? textBox.Text : string.Empty);
+        }
+
         private string _lastSortColumn = "";
         private bool _lastSortAscending = true;
 
@@ -506,6 +535,7 @@ namespace AIToady.Harvester
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
+            _viewModel.PromptUserInputRequested += PromptUserForInput;
             
             _viewModel.ExecuteGo();
         }

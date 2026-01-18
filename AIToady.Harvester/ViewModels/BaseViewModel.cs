@@ -64,12 +64,14 @@ namespace AIToady.Harvester.ViewModels
         public event Action<string> NavigateRequested;
         public event Func<string, Task<string>> ExecuteScriptRequested;
         public event Action<ViewModelType> ViewModelSwitchRequested;
+        public event Func<string, Task<string>> PromptUserInputRequested;
         EmailService _emailService;
 
         protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
         protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
         protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
         protected async Task<string> InvokeExecuteScriptRequested(string script) => await ExecuteScriptRequested?.Invoke(script);
+        protected async Task<string> PromptUserInput(string prompt) => await PromptUserInputRequested?.Invoke(prompt) ?? string.Empty;
         protected static string GetDriveWithMostFreeSpace()
         {
             return DriveInfo.GetDrives()
@@ -88,7 +90,7 @@ namespace AIToady.Harvester.ViewModels
             get => _forumName;
             set => SetProperty(ref _forumName, value);
         }
-
+        public string Category { get; set; }
         public string MessageElement
         {
             get => _messageElement;
@@ -221,49 +223,14 @@ namespace AIToady.Harvester.ViewModels
 
         public async void ExecuteStartHarvesting()
         {
-            if (_isHarvesting)
-            {
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
+            if (!IsReadyToHarvest())
                 return;
-            }
-
-            if (!IsWithinOperatingHours())
-            {
-                MessageBox.Show(Application.Current.MainWindow, "Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
-                HarvestingButtonText = "Sleeping";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
-            {
-                MessageBox.Show(Application.Current.MainWindow, "Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
-            {
-                MessageBox.Show(Application.Current.MainWindow, "Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _isHarvesting = false;
-                HarvestingButtonText = "Start Harvesting";
-                return;
-            }
-
-            _emailService = new EmailService(EmailAccount, EmailPassword);
-
-            _isHarvesting = true;
-            HarvestingButtonText = "Stop Harvesting";
 
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
-                AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
-
                 await ExecuteLoadThreads();
 
-                // Check operating hours after each page
                 if (!IsWithinOperatingHours())
                 {
                     _isHarvesting = false;
@@ -271,7 +238,6 @@ namespace AIToady.Harvester.ViewModels
                     break;
                 }
 
-                // Process all threads on current page
                 for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
                 {
                     await CheckInternetConnection();
@@ -286,7 +252,7 @@ namespace AIToady.Harvester.ViewModels
                         return;
                     }
                 }
-
+                //Only skip threads on the first page (like when harvesting was stopped mid-page)
                 ThreadsToSkip = 0;
 
                 await LoadForumPage();
@@ -311,6 +277,47 @@ namespace AIToady.Harvester.ViewModels
 
             if (_isHarvesting)
                 StopHarvesting();
+        }
+
+        private bool IsReadyToHarvest()
+        {
+            if (_isHarvesting)
+            {
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return false;
+            }
+
+            if (!IsWithinOperatingHours())
+            {
+                MessageBox.Show(Application.Current.MainWindow, "Outside operating hours. Harvesting will start automatically during operating hours.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                HarvestingButtonText = "Sleeping";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(ThreadElement) || string.IsNullOrEmpty(NextElement))
+            {
+                MessageBox.Show(Application.Current.MainWindow, "Thread Element and Next Element must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(SiteName) || string.IsNullOrEmpty(ForumName))
+            {
+                MessageBox.Show(Application.Current.MainWindow, "Site Name and Forum Name must be specified before harvesting.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+                return false;
+            }
+
+            _emailService = new EmailService(EmailAccount, EmailPassword);
+
+            _isHarvesting = true;
+            HarvestingButtonText = "Stop Harvesting";
+            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+
+            return true;
         }
 
         private async Task CheckInternetConnection()
@@ -351,7 +358,7 @@ namespace AIToady.Harvester.ViewModels
             _threadName = await GetThreadName(threadUrl);
             thread.ThreadName = _threadName;
 
-            string threadFolder = Path.Combine(_rootFolder, SiteName, ForumName, _threadName);
+            string threadFolder = GetThreadFolder();
 
             // Check if thread folder exists and skip if SkipExistingThreads is true
             if (SkipExistingThreads && Directory.Exists(threadFolder))
@@ -378,11 +385,6 @@ namespace AIToady.Harvester.ViewModels
 
                 bool nextPageExists = await CheckIfNextPageExists();
 
-                if (_threadName.ToLower().Contains("inary trigger"))
-                {
-
-                }
-
                 if (nextPageExists)
                 {
                     _threadPageNumber++;
@@ -404,6 +406,17 @@ namespace AIToady.Harvester.ViewModels
             }
 
             return thread;
+        }
+
+        private string GetThreadFolder()
+        {
+            string threadFolder = Path.Combine(_rootFolder, SiteName);
+
+            if (!string.IsNullOrEmpty(Category))
+                threadFolder = Path.Combine(threadFolder, Category);
+
+            threadFolder = Path.Combine(threadFolder, ForumName, _threadName);
+            return threadFolder;
         }
 
         protected virtual async Task<string> GetThreadName(string threadUrl)

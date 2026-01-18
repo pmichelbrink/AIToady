@@ -31,7 +31,10 @@ namespace AIToady.Harvester.ViewModels
                 {
                     result = JsonSerializer.Deserialize<string>(result);
                     if (!string.IsNullOrEmpty(result))
+                    {
+                        Category = await PromptUserInput("Enter Category (optional):");
                         ForumName = result;
+                    }
                 }
             }
             catch { }
@@ -163,31 +166,33 @@ namespace AIToady.Harvester.ViewModels
         protected async override Task<List<ForumMessage>> HarvestPage()
         {
             string extractScript = @"
-            (function() {
+                (function() {
                     let messages = [];
-        
+
                     document.querySelectorAll('div.tw-rounded-sm.tw-p-2').forEach(messageDiv => {
                         let timeElement = messageDiv.querySelector('strong [itemprop=""datePublished""]');
                         let messageBodyElement = messageDiv.querySelector('td.tw-thread__body');
+                        let postIdLink = messageDiv.querySelector('a[id^=""i""]');
                         let images = [];
                         let attachments = [];
-            
+
                         if (messageBodyElement) {
                             // Extract images
                             messageBodyElement.querySelectorAll('img').forEach(img => {
                                 let imageUrl = img.src;
-                                if (imageUrl && !imageUrl.includes('data:image')) {
+                                if (imageUrl && !imageUrl.includes('data:image') && !imageUrl.includes('clear.gif')) {
                                     imageUrl = imageUrl.split('?')[0];
                                     if (!images.includes(imageUrl)) {
                                         images.push(imageUrl);
                                     }
                                 }
                             });
-                
+
                             let timestamp = timeElement ? timeElement.getAttribute('content') : '';
-                
+                            let postId = postIdLink ? postIdLink.getAttribute('id') : '';
+
                             messages.push({
-                                postId: '',
+                                postId: postId,
                                 username: 'ArchivedUser',
                                 message: messageBodyElement.textContent.trim().replace(/\\s+/g, ' '),
                                 timestamp: timestamp,
@@ -196,10 +201,10 @@ namespace AIToady.Harvester.ViewModels
                             });
                         }
                     });
-        
+
                     return JSON.stringify(messages);
                 })()
-            ";
+                ";
 
 
             try
