@@ -45,7 +45,7 @@ namespace AIToady.Harvester.ViewModels
             "novarata.net", "combatmachine.net", "hostingpics.net", "gunbroker.com", 
             "funnywebsite.com", "weaponarts.com", "bing.net", "sightpusher.com",
             "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com",
-            "picyard.com", "nodakspud.com"
+            "picyard.com", "nodakspud.com", "vcmedia.vn"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
