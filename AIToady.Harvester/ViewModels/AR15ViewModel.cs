@@ -90,24 +90,20 @@ namespace AIToady.Harvester.ViewModels
         }
 
 
+
         protected async override Task<bool> CheckIfNextPageExists()
         {
             try
             {
                 string script = @"
-                    (function() {
-                        let nextButton = document.querySelector('.pageNav-jump--next');
-                        if (nextButton && nextButton.getAttribute('aria-disabled') !== 'true') {
-                            if (nextButton.tagName === 'A' && nextButton.href) {
-                                return nextButton.getAttribute('href');
-                            } else {
-                                nextButton.click(); 
-                                return 'clicked';
-                            }
-                        }
-                        return 'not_found';
-                    })()
-                ";
+            (function() {
+                let nextLink = document.querySelector('a[href*=""?page=""]');
+                if (nextLink && nextLink.textContent.includes('Next Page')) {
+                    return nextLink.getAttribute('href');
+                }
+                return 'not_found';
+            })()
+        ";
                 string result = await InvokeExecuteScriptRequested(script);
 
                 if (string.IsNullOrEmpty(result))
@@ -118,11 +114,7 @@ namespace AIToady.Harvester.ViewModels
 
                 result = JsonSerializer.Deserialize<string>(result);
 
-                if (result == "clicked")
-                {
-                    return true;
-                }
-                else if (result == "not_found")
+                if (result == "not_found")
                 {
                     return false;
                 }
@@ -141,6 +133,32 @@ namespace AIToady.Harvester.ViewModels
                 AddLogEntry($"Error checking next page: {ex.Message}");
                 return false;
             }
+        }
+        protected override async Task<bool> LoadNextForumPage()
+        {
+            string nextScript = @"
+                (function() {
+                    let nextLink = document.querySelector('a[href*=""page=""]');
+                    if (nextLink && nextLink.textContent.includes('Next')) {
+                        return nextLink.getAttribute('href');
+                    }
+                    return 'not_found';
+                })()
+            ";
+            string nextResult = await InvokeExecuteScriptRequested(nextScript);
+            nextResult = JsonSerializer.Deserialize<string>(nextResult);
+
+            if (nextResult == "not_found")
+            {
+                return false;
+            }
+
+            // Navigate to the next page
+            string currentUrl = await InvokeExecuteScriptRequested("window.location.origin");
+            currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+            string fullUrl = currentUrl + nextResult;
+            InvokeNavigateRequested(fullUrl);
+            return true;
         }
         protected async override Task<List<ForumMessage>> HarvestPage()
         {

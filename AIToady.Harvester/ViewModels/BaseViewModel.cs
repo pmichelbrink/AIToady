@@ -291,7 +291,7 @@ namespace AIToady.Harvester.ViewModels
 
                 await LoadForumPage();
 
-                hasNextForumPage = await CheckIfNextPageExists();
+                hasNextForumPage = await LoadNextForumPage();
 
                 if (hasNextForumPage)
                 {
@@ -378,7 +378,7 @@ namespace AIToady.Harvester.ViewModels
 
                 bool nextPageExists = await CheckIfNextPageExists();
 
-                if (_threadName.ToLower().Contains("newb needs help with"))
+                if (_threadName.ToLower().Contains("inary trigger"))
                 {
 
                 }
@@ -444,23 +444,10 @@ namespace AIToady.Harvester.ViewModels
             return akNextResult == "clicked";
         }
 
-        private async Task<bool> LoadNextForumPage()
+        protected virtual async Task<bool> LoadNextForumPage()
         {
-            string nextScript = @"
-                        (function() {
-                            let nextButton = document.querySelector('.pageNav-jump.pageNav-jump--next');
-                            if (nextButton) {
-                                nextButton.click();
-                                return 'clicked';
-                            }
-                            return 'not_found';
-                        })()
-                    ";
-            string nextResult = await InvokeExecuteScriptRequested(nextScript);
-            nextResult = JsonSerializer.Deserialize<string>(nextResult);
-            return nextResult == "clicked";
+            return await CheckIfNextPageExists();
         }
-
         protected virtual async Task ExtractForumName() { }
 
         public virtual async void ExecuteGo()
