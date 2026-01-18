@@ -35,7 +35,13 @@ namespace AIToady.Harvester
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
-            WebView.CoreWebView2InitializationCompleted += (s, e) => {
+            WebView.CoreWebView2InitializationCompleted += async (s, e) => {
+                await WebView.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                
+                WebView.CoreWebView2.ProcessFailed += (sender, args) => {
+                    Dispatcher.Invoke(() => WebView.Reload());
+                };
+                
                 WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
                     if (_isCapturingElement) {
                         string result = args.TryGetWebMessageAsString();
