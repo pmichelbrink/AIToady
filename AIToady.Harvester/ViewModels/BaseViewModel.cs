@@ -422,7 +422,7 @@ namespace AIToady.Harvester.ViewModels
                 threadFolder = Path.Combine(threadFolder, Category);
 
             threadFolder = Path.Combine(threadFolder, ForumName, _threadName);
-            return threadFolder;
+            return threadFolder.Replace("/", "_");
         }
 
         protected virtual async Task<string> GetThreadName(string threadUrl)
