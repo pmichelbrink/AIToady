@@ -60,7 +60,7 @@ export default function HomePage() {
       localStorage.setItem('queriesRemaining', newCount.toString());
     }
     
-    navigate(`/query?q=${encodeURIComponent(searchQuery)}`);
+    navigate(`/query?q=${encodeURIComponent(searchQuery)}&id=${result.queryId}`);
   };
 
   const handleAskToady = () => !isSubmitting && handleQuery();
