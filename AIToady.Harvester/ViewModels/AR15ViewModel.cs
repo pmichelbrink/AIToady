@@ -141,9 +141,11 @@ namespace AIToady.Harvester.ViewModels
         {
             string nextScript = @"
                 (function() {
-                    let nextLink = document.querySelector('a[href*=""page=""]');
-                    if (nextLink && nextLink.textContent.includes('Next')) {
-                        return nextLink.getAttribute('href');
+                    let links = document.querySelectorAll('a');
+                    for (let link of links) {
+                        if (link.textContent.trim() === 'Next »' || link.textContent.includes('Next')) {
+                            return link.getAttribute('href');
+                        }
                     }
                     return 'not_found';
                 })()

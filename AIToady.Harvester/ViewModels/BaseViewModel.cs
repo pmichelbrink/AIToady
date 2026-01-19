@@ -272,6 +272,10 @@ namespace AIToady.Harvester.ViewModels
                     Url = JsonSerializer.Deserialize<string>(Url);
                     SaveSettings();
                 }
+                else
+                {
+                    System.Media.SystemSounds.Beep.Play();
+                }
 
                 if (_stopAfterCurrentPage)
                 {
@@ -544,13 +548,11 @@ namespace AIToady.Harvester.ViewModels
         }
         public async Task LoadForumPage()
         {
-            //Load the forum page (a thread page is currently loaded) and
-            //wait for navigation to complete by checking URL
             InvokeNavigateRequested(Url);
             string currentUrl;
             do
             {
-                await Task.Delay(5000);
+                await Task.Delay(GetRandomizedDelay());
                 currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
                 currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
             } while (currentUrl != Url && _isHarvesting);
