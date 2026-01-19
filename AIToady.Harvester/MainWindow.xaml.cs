@@ -147,71 +147,77 @@ namespace AIToady.Harvester
             catch { }
         }
 
-        private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
+        private async Task<string> ExtractFlickrAlbum(string albumUrl, string filePath)
         {
-            /*
             try
             {
-                // Try clicking image in current WebView2 page for attachment URLs
-                if (imageUrl.Contains("attachments"))
+                string currentUrl = WebView.Source?.ToString();
+                WebView.Source = new Uri(albumUrl);
+                await Task.Delay(3000);
+
+                string script = @"
+                    (function() {
+                        var imageUrls = [];
+                        var imgs = document.querySelectorAll('img[src*=""live.staticflickr.com""]');
+                        imgs.forEach(img => {
+                            var src = img.src;
+                            if (src && !imageUrls.includes(src)) {
+                                src = src.replace('_m.jpg', '_b.jpg').replace('_n.jpg', '_b.jpg').replace('_z.jpg', '_b.jpg');
+                                imageUrls.push(src);
+                            }
+                        });
+                        return JSON.stringify(imageUrls);
+                    })();
+                ";
+
+                string result = await WebView.ExecuteScriptAsync(script);
+                if (!string.IsNullOrEmpty(currentUrl))
+                    WebView.Source = new Uri(currentUrl);
+
+                do
+                    await Task.Delay(500);
+                while (currentUrl != WebView.Source?.ToString());
+
+                if (!string.IsNullOrEmpty(result) && result != "null")
                 {
-                    string currentUrl = WebView.Source?.ToString();
-                    var parts = imageUrl.Split('/');
-                    var fileName = parts[parts.Length - 1];
-                    var attachmentId = fileName.Split('-')[0];
+                    result = result.Trim('"').Replace("\\\"", "\"");
+                    var imageUrls = System.Text.Json.JsonSerializer.Deserialize<string[]>(result);
                     
-                    string clickScript = $@"
-                        var imgs = document.querySelectorAll('img');
-                        var found = false;
-                        for (var i = 0; i < imgs.length; i++) {{
-                            var img = imgs[i];
-                            if ((img.src && img.src.includes('{attachmentId}')) || 
-                                (img.getAttribute('data-src') && img.getAttribute('data-src').includes('{attachmentId}'))) {{
-                                img.click();
-                                found = true;
-                                break;
-                            }}
-                        }}
-                        found;
-                    ";
-                    
-                    string clicked = await WebView.ExecuteScriptAsync(clickScript);
-                    if (clicked == "true")
+                    if (imageUrls != null && imageUrls.Length > 0)
                     {
-                        await Task.Delay(1000);
+                        string directory = Path.GetDirectoryName(filePath);
+                        string baseFileName = Path.GetFileNameWithoutExtension(filePath);
                         
-                        string script = @"
-                            var fullImg = document.querySelector('.lg-object.lg-image');
-                            if (fullImg && fullImg.complete) {
-                                var canvas = document.createElement('canvas');
-                                canvas.width = fullImg.naturalWidth || fullImg.width;
-                                canvas.height = fullImg.naturalHeight || fullImg.height;
-                                var ctx = canvas.getContext('2d');
-                                ctx.drawImage(fullImg, 0, 0);
-                                canvas.toDataURL().split(',')[1];
-                            } else null;
-                        ";
-                        
-                        string result = await WebView.ExecuteScriptAsync(script);
-                        
-                        // Navigate back to original URL
-                        if (!string.IsNullOrEmpty(currentUrl))
-                            WebView.Source = new Uri(currentUrl);
-                        
-                        if (!string.IsNullOrEmpty(result) && result != "null")
+                        for (int i = 0; i < imageUrls.Length; i++)
                         {
-                            result = result.Trim('"');
-                            var imageBytes = Convert.FromBase64String(result);
-                            await File.WriteAllBytesAsync(filePath, imageBytes);
-                            return "success";
+                            string imageUrl = imageUrls[i];
+                            string extension = Path.GetExtension(imageUrl).Split('?')[0];
+                            string newFilePath = Path.Combine(directory, $"{baseFileName}_{i + 1}{extension}");
+                            
+                            using (var httpClient = new System.Net.Http.HttpClient())
+                            {
+                                var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
+                                await File.WriteAllBytesAsync(newFilePath, imageBytes);
+                            }
                         }
+                        return "success";
                     }
                 }
             }
             catch { }
-            */
+            return "404";
+        }
+
+        private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
+        {
             try
             {
+                // Handle Flickr album links
+                if (imageUrl.Contains("flickr.com") && imageUrl.Contains("/in/set-"))
+                {
+                    return await ExtractFlickrAlbum(imageUrl, filePath);
+                }
+
                 // First try simple HttpClient approach
                 using (var httpClient = new System.Net.Http.HttpClient())
                 {

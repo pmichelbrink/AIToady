@@ -682,6 +682,8 @@ namespace AIToady.Harvester.ViewModels
                             {
                                 File.Delete(imagePath);
                                 AddLogEntry($"Deleted HTML file masquerading as image: {fileName}");
+
+                                CheckForFlickrAlbumImages(imagesFolder, imageNames, imagePath);
                             }
                             else
                             {
@@ -748,6 +750,19 @@ namespace AIToady.Harvester.ViewModels
             thread.Messages.AddRange(pageMessages);
         }
 
+        private void CheckForFlickrAlbumImages(string imagesFolder, List<string> imageNames, string imagePath)
+        {
+            string baseFileName = Path.GetFileNameWithoutExtension(imagePath);
+            int albumIndex = 1;
+            string albumImagePath = Path.Combine(imagesFolder, $"{baseFileName}_{albumIndex}{Path.GetExtension(imagePath)}");
+            while (File.Exists(albumImagePath))
+            {
+                imageNames.Add(Path.GetFileName(albumImagePath));
+                _threadImageCounter++;
+                albumIndex++;
+                albumImagePath = Path.Combine(imagesFolder, $"{baseFileName}_{albumIndex}{Path.GetExtension(imagePath)}");
+            }
+        }
 
         protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
