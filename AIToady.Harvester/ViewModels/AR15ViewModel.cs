@@ -1,6 +1,7 @@
 ﻿using AIToady.Harvester.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
@@ -33,7 +34,7 @@ namespace AIToady.Harvester.ViewModels
                     if (!string.IsNullOrEmpty(result))
                     {
                         Category = await PromptUserInput("Enter Category (optional):");
-                        ForumName = result;
+                        ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                     }
                 }
             }

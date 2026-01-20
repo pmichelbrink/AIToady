@@ -28,7 +28,7 @@ namespace AIToady.Harvester.ViewModels
                     result = JsonSerializer.Deserialize<string>(result);
                     if (!string.IsNullOrEmpty(result))
                     {
-                        ForumName = result;
+                        ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                         if (Url.Contains("akfiles", StringComparison.InvariantCultureIgnoreCase))
                             SiteName = "The AK Files";
                         else

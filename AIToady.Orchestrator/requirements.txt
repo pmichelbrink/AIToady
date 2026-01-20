@@ -1,0 +1,4 @@
+flask
+redis
+ollama
+python-dotenv

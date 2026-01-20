@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIToady Orchestrator</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { background: #f5f5f5; padding: 15px; height: 400px; overflow-y: auto; margin-top: 20px; border: 1px solid #ddd; font-family: monospace; white-space: pre-wrap; }
+        .log-entry { padding: 8px; border-bottom: 1px solid #ddd; font-family: monospace; font-size: 12px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>AIToady Orchestrator</h1>
+    
+    <div id="config-section">
+        <h3>Configuration</h3>
+        <input type="text" id="redis-host" placeholder="Redis Host (optional - leave blank to disable)" />
+        <input type="text" id="redis-port" placeholder="Redis Port (default: 6379)" value="6379" />
+        <input type="text" id="ollama-model" placeholder="Ollama Model (default: llama2)" value="llama2" />
+        <input type="text" id="sns-topic" placeholder="SNS Topic ARN (optional - for reference)" />
+        <button onclick="startOrchestrator()">Start Orchestrator</button>
+        <div id="status"></div>
+    </div>
+
+    <div id="log-section" style="display:none;">
+        <h3>Message Log</h3>
+        <div id="endpoint-info" class="status success"></div>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // Load saved config on page load
+        window.onload = function() {
+            fetch('/config')
+                .then(r => r.json())
+                .then(config => {
+                    if (config.redis_host) document.getElementById('redis-host').value = config.redis_host;
+                    if (config.redis_port) document.getElementById('redis-port').value = config.redis_port;
+                    if (config.ollama_model) document.getElementById('ollama-model').value = config.ollama_model;
+                    if (config.sns_topic) document.getElementById('sns-topic').value = config.sns_topic;
+                });
+        };
+
+        function startOrchestrator() {
+            const config = {
+                redis_host: document.getElementById('redis-host').value,
+                redis_port: document.getElementById('redis-port').value,
+                ollama_model: document.getElementById('ollama-model').value,
+                sns_topic: document.getElementById('sns-topic').value
+            };
+
+            fetch('/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('config-section').style.display = 'none';
+                    document.getElementById('log-section').style.display = 'block';
+                    const topicArn = data.sns_topic || 'YOUR_TOPIC';
+                    document.getElementById('endpoint-info').innerHTML = 
+                        `<strong>Endpoint:</strong> ${data.endpoint}<br>` +
+                        `<strong>Subscribe SNS:</strong> aws sns subscribe --topic-arn ${topicArn} --protocol http --notification-endpoint ${data.endpoint}`;
+                    startLogPolling();
+                } else {
+                    document.getElementById('status').innerHTML = `<div class="status error">${data.error}</div>`;
+                }
+            });
+        }
+
+        function startLogPolling() {
+            setInterval(() => {
+                fetch('/logs')
+                    .then(r => r.json())
+                    .then(logs => {
+                        const logDiv = document.getElementById('log');
+                        const wasScrolledToBottom = logDiv.scrollHeight - logDiv.clientHeight <= logDiv.scrollTop + 1;
+                        
+                        logDiv.innerHTML = logs.map(l => 
+                            `<div class="log-entry">[${l.time}] ${l.message}</div>`
+                        ).join('');
+                        
+                        if (wasScrolledToBottom) {
+                            logDiv.scrollTop = logDiv.scrollHeight;
+                        }
+                    });
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

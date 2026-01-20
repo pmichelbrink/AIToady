@@ -1,6 +1,7 @@
 ﻿using AIToady.Harvester.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
@@ -27,7 +28,7 @@ namespace AIToady.Harvester.ViewModels
                 {
                     result = JsonSerializer.Deserialize<string>(result);
                     if (!string.IsNullOrEmpty(result))
-                        ForumName = result;
+                        ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                 }
 
                 Category = string.Empty;
