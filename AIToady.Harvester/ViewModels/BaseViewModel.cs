@@ -235,6 +235,8 @@ namespace AIToady.Harvester.ViewModels
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
+                AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+
                 await ExecuteLoadThreads();
 
                 if (!IsWithinOperatingHours())
@@ -325,7 +327,6 @@ namespace AIToady.Harvester.ViewModels
 
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
-            AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
 
             return true;
         }
@@ -884,18 +885,20 @@ namespace AIToady.Harvester.ViewModels
         {
             if (_isHarvesting && !IsWithinOperatingHours())
             {
-                _isHarvesting = false;
+                StopAfterCurrentPage = true;
                 HarvestingButtonText = "Sleeping";
             }
             else if (!_isHarvesting && IsWithinOperatingHours() && HarvestingButtonText == "Sleeping" && _threadLinks.Count > 0)
             {
                 HarvestingButtonText = "Start Harvesting";
+                StopAfterCurrentPage = false;
                 // Auto-resume harvesting
                 Application.Current.Dispatcher.Invoke(() => ExecuteStartHarvesting());
             }
             else if (HarvestingButtonText == "Sleeping" && IsWithinOperatingHours())
             {
                 HarvestingButtonText = "Start Harvesting";
+                StopAfterCurrentPage = false;
             }
         }
         public void AddLogEntry(string message)
