@@ -143,6 +143,13 @@ namespace AIToady.Harvester
                 {
                     File.Move(downloadedFile, filePath, true);
                 }
+                else
+                {
+                    string normalizedFileName = Path.GetFileNameWithoutExtension(fileName).Replace(" ", ".").ToLower() + Path.GetExtension(fileName).ToLower();
+                    string normalizedDownloadedFile = Path.Combine(downloadsPath, normalizedFileName);
+                    if (File.Exists(normalizedDownloadedFile))
+                        File.Move(normalizedDownloadedFile, filePath, true);
+                }
             }
             catch { }
         }
