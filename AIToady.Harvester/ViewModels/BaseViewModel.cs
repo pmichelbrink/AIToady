@@ -47,7 +47,7 @@ namespace AIToady.Harvester.ViewModels
             "funnywebsite.com", "weaponarts.com", "bing.net", "sightpusher.com",
             "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com",
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
-            "gunscience.com"
+            "gunscience.com", "picfury.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
