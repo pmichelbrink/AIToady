@@ -1,0 +1,7 @@
+SNS:
+arn:aws:sns:us-east-1:495007606233:AIToadyQueryCreated
+
+aws sns subscribe \
+  --topic-arn arn:aws:sns:us-east-1:495007606233:AIToadyQueryCreated.fifo \
+  --protocol https \
+  --notification-endpoint https://f956f0879674.ngrok-free.app/sns
