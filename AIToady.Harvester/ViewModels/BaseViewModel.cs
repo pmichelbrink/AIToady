@@ -274,6 +274,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
+                    await _emailService.SendEmailAsync("Test@gmail.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
                     System.Media.SystemSounds.Beep.Play();
                 }
 
