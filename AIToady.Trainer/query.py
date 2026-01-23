@@ -48,19 +48,27 @@ class RAGQuery:
         top_indices = np.argsort(similarities)[-top_k:][::-1]
         return [(self.documents[i], self.metadata[i], similarities[i]) for i in top_indices]
     
-    def query(self, question):
-        """Query the RAG system"""
-        if not self.current_db:
-            return "No model loaded"
+    def query(self, question, use_rag=True, default_model='ministral-3:8b'):
+        """Query the system with or without RAG"""
+        if use_rag and not self.current_db:
+            return "No model loaded for RAG query"
         
-        # Find relevant documents
-        results = self.find_similar(question, top_k=3)
+        # Determine which model to use
+        model = self.base_model if self.base_model else default_model
         
-        # Build context from results
-        context = "\n\n".join([doc for doc, _, _ in results])
+        print(f"Query: use_rag={use_rag}, model={model}, current_db={self.current_db}")
         
-        # Create prompt with context
-        prompt = f"""Based on the following information, answer the question.
+        if use_rag:
+            # Find relevant documents
+            results = self.find_similar(question, top_k=3)
+            
+            # Build context from results
+            context = "\n\n".join([doc for doc, _, _ in results])
+            
+            print(f"RAG Context length: {len(context)} chars")
+            
+            # Create prompt with context
+            prompt = f"""Based on the following information, answer the question.
 
 Context:
 {context}
@@ -68,9 +76,13 @@ Context:
 Question: {question}
 
 Answer:"""
+        else:
+            # Direct query without RAG
+            print("Direct query without RAG context")
+            prompt = question
         
         # Generate response
-        response = ollama.generate(model=self.base_model, prompt=prompt)
+        response = ollama.generate(model=model, prompt=prompt)
         return response['response']
 
 rag = RAGQuery()
@@ -101,8 +113,9 @@ def load_model():
 @app.route('/query', methods=['POST'])
 def query():
     question = request.json.get('question')
+    use_rag = request.json.get('use_rag', True)
     try:
-        answer = rag.query(question)
+        answer = rag.query(question, use_rag)
         return jsonify({'answer': answer})
     except Exception as e:
         return jsonify({'error': str(e)})

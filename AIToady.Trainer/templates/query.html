@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AIToady Query</title>
+    <title>AI Toady Query</title>
     <style>
         body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; background: #fff; color: #333; }
         h1 { color: #333; }
@@ -26,7 +26,7 @@
     </style>
 </head>
 <body>
-    <h1>🐸 AIToady Query</h1>
+    <h1><img src="/static/toady.png" alt="AIToady" style="height: 40px; vertical-align: middle; margin-right: 10px;">AI Toady Query</h1>
     
     <div class="section">
         <h2>Configuration</h2>
@@ -39,7 +39,7 @@
         <h2>Select Model</h2>
         <label>Trained Model:</label>
         <select id="modelSelect">
-            <option value="">Loading models...</option>
+            <option value=""><None></option>
         </select>
         <button onclick="loadModel()">Load Model</button>
         <div id="modelStatus"></div>
@@ -73,17 +73,19 @@
             const res = await fetch('/list_models');
             const data = await res.json();
             const select = document.getElementById('modelSelect');
-            if (data.models.length === 0) {
-                select.innerHTML = '<option value="">No trained models found</option>';
-            } else {
-                select.innerHTML = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+            let options = '<option value=""><None></option>';
+            if (data.models.length > 0) {
+                options += data.models.map(m => `<option value="${m}">${m}</option>`).join('');
             }
+            select.innerHTML = options;
         }
         
         async function loadModel() {
             const modelName = document.getElementById('modelSelect').value;
+            
             if (!modelName) {
-                alert('Please select a model');
+                currentModel = null;
+                document.getElementById('modelStatus').innerHTML = '<div style="color: orange;">⚠ No model loaded - queries will use base model without training data</div>';
                 return;
             }
             
@@ -105,11 +107,6 @@
         }
         
         async function askQuestion() {
-            if (!currentModel) {
-                alert('Please load a model first');
-                return;
-            }
-            
             const question = document.getElementById('question').value.trim();
             if (!question) {
                 alert('Please enter a question');
@@ -126,7 +123,7 @@
                 const res = await fetch('/query', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({question})
+                    body: JSON.stringify({question, use_rag: currentModel !== null})
                 });
                 
                 const data = await res.json();
