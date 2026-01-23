@@ -45,7 +45,7 @@ class RAGTrainer:
             chunks.append(text[i:i + max_length])
         return chunks
     
-    def build_knowledge_base(self, model_name, folders, base_model):
+    def build_knowledge_base(self, model_name, folders, base_model, embedding_model='nomic-embed-text'):
         """Build vector database from JSON files in multiple folders"""
         global training_status, status_lock
         
@@ -62,8 +62,7 @@ class RAGTrainer:
         self.documents = []
         self.metadata = []
         
-        # Use nomic-embed-text for embeddings (pull if needed)
-        embedding_model = 'nomic-embed-text'
+        # Use specified embedding model (pull if needed)
         try:
             ollama.embeddings(model=embedding_model, prompt='test')
         except:
@@ -185,8 +184,9 @@ def start_training():
     model_name = data.get('model_name', '')
     folders = data.get('folders', [])
     base_model = data.get('base_model')
+    embedding_model = data.get('embedding_model', 'nomic-embed-text')
     
-    print(f"Received training request: db_location={db_location}, model_name={model_name}, folders={folders}, model={base_model}")
+    print(f"Received training request: db_location={db_location}, model_name={model_name}, folders={folders}, model={base_model}, embedding={embedding_model}")
     
     if not model_name or not folders or not base_model:
         return jsonify({'success': False, 'error': 'Missing model name, folders, or base model'})
@@ -197,7 +197,7 @@ def start_training():
     
     def train():
         print("Training thread started")
-        trainer.build_knowledge_base(model_name, folders, base_model)
+        trainer.build_knowledge_base(model_name, folders, base_model, embedding_model)
         print("Training thread completed")
     
     Thread(target=train, daemon=True).start()

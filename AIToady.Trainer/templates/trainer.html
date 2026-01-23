@@ -51,6 +51,11 @@
             <option value="">Loading models...</option>
         </select>
         
+        <label>Embedding Model:</label>
+        <select id="embeddingModel">
+            <option value="">Loading models...</option>
+        </select>
+        
         <button onclick="startTraining()">Start Training</button>
     </div>
     
@@ -73,8 +78,15 @@
         async function loadModels() {
             const res = await fetch('/models');
             const data = await res.json();
-            const select = document.getElementById('baseModel');
-            select.innerHTML = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+            const baseSelect = document.getElementById('baseModel');
+            const embeddingSelect = document.getElementById('embeddingModel');
+            
+            const options = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+            baseSelect.innerHTML = options;
+            embeddingSelect.innerHTML = options;
+            
+            // Set default embedding model
+            embeddingSelect.value = 'nomic-embed-text';
         }
         
         function addFolder() {
@@ -110,18 +122,25 @@
                 return;
             }
             
+            const embeddingModel = document.getElementById('embeddingModel').value;
+            if (!embeddingModel) {
+                alert('Please select an embedding model');
+                return;
+            }
+            
             // Save configuration
             localStorage.setItem('trainer_config', JSON.stringify({
                 db_location: dbLocation,
                 model_name: modelName,
                 folders: folders,
-                base_model: baseModel
+                base_model: baseModel,
+                embedding_model: embeddingModel
             }));
             
             const res = await fetch('/start_training', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({db_location: dbLocation, model_name: modelName, folders, base_model: baseModel})
+                body: JSON.stringify({db_location: dbLocation, model_name: modelName, folders, base_model: baseModel, embedding_model: embeddingModel})
             });
             
             const data = await res.json();
@@ -191,6 +210,13 @@
                     document.getElementById('baseModel').value = config.base_model;
                 }, 500);
             }
+            
+            // Restore embedding model selection
+            if (config.embedding_model) {
+                setTimeout(() => {
+                    document.getElementById('embeddingModel').value = config.embedding_model;
+                }, 500);
+            }
         } else {
             addFolder();
         }
@@ -203,13 +229,15 @@
                 .map(i => i.value.trim())
                 .filter(v => v);
             const baseModel = document.getElementById('baseModel').value;
+            const embeddingModel = document.getElementById('embeddingModel').value;
             
-            if (dbLocation || modelName || folders.length > 0 || baseModel) {
+            if (dbLocation || modelName || folders.length > 0 || baseModel || embeddingModel) {
                 localStorage.setItem('trainer_config', JSON.stringify({
                     db_location: dbLocation,
                     model_name: modelName,
                     folders: folders,
-                    base_model: baseModel
+                    base_model: baseModel,
+                    embedding_model: embeddingModel
                 }));
             }
         });
