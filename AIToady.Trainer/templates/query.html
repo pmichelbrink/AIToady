@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIToady Query</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #333; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        select, textarea, button { padding: 10px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        textarea { min-height: 100px; resize: vertical; }
+        .answer { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; white-space: pre-wrap; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>🐸 AIToady Query</h1>
+    
+    <div class="section">
+        <h2>Configuration</h2>
+        <label>Vector Database Location:</label>
+        <input type="text" id="dbLocation" placeholder="C:\Vector DBs" value="C:\Vector DBs" />
+        <button onclick="updateDbLocation()">Update Location</button>
+    </div>
+    
+    <div class="section">
+        <h2>Select Model</h2>
+        <label>Trained Model:</label>
+        <select id="modelSelect">
+            <option value="">Loading models...</option>
+        </select>
+        <button onclick="loadModel()">Load Model</button>
+        <div id="modelStatus"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Ask a Question</h2>
+        <label>Question:</label>
+        <textarea id="question" placeholder="What would you like to know?"></textarea>
+        <button onclick="askQuestion()" id="askBtn">Ask</button>
+        <div id="answer"></div>
+    </div>
+
+    <script>
+        let currentModel = null;
+        
+        async function updateDbLocation() {
+            const dbLocation = document.getElementById('dbLocation').value.trim();
+            localStorage.setItem('db_location', dbLocation);
+            
+            const res = await fetch('/set_db_location', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({db_location: dbLocation})
+            });
+            
+            loadModels();
+        }
+        
+        async function loadModels() {
+            const res = await fetch('/list_models');
+            const data = await res.json();
+            const select = document.getElementById('modelSelect');
+            if (data.models.length === 0) {
+                select.innerHTML = '<option value="">No trained models found</option>';
+            } else {
+                select.innerHTML = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+            }
+        }
+        
+        async function loadModel() {
+            const modelName = document.getElementById('modelSelect').value;
+            if (!modelName) {
+                alert('Please select a model');
+                return;
+            }
+            
+            document.getElementById('modelStatus').innerHTML = '<div class="loading">Loading model...</div>';
+            
+            const res = await fetch('/load_model', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({model_name: modelName})
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                currentModel = modelName;
+                document.getElementById('modelStatus').innerHTML = `<div style="color: green;">✓ Model "${modelName}" loaded</div>`;
+            } else {
+                document.getElementById('modelStatus').innerHTML = `<div style="color: red;">Error: ${data.error}</div>`;
+            }
+        }
+        
+        async function askQuestion() {
+            if (!currentModel) {
+                alert('Please load a model first');
+                return;
+            }
+            
+            const question = document.getElementById('question').value.trim();
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            const answerDiv = document.getElementById('answer');
+            const askBtn = document.getElementById('askBtn');
+            
+            answerDiv.innerHTML = '<div class="loading">Thinking...</div>';
+            askBtn.disabled = true;
+            
+            try {
+                const res = await fetch('/query', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({question})
+                });
+                
+                const data = await res.json();
+                if (data.answer) {
+                    answerDiv.innerHTML = `<div class="answer"><strong>Answer:</strong><br>${data.answer}</div>`;
+                } else {
+                    answerDiv.innerHTML = `<div style="color: red;">Error: ${data.error}</div>`;
+                }
+            } catch (e) {
+                answerDiv.innerHTML = `<div style="color: red;">Error: ${e.message}</div>`;
+            } finally {
+                askBtn.disabled = false;
+            }
+        }
+        
+        loadModels();
+        
+        // Restore db location
+        const savedLocation = localStorage.getItem('db_location');
+        if (savedLocation) {
+            document.getElementById('dbLocation').value = savedLocation;
+            updateDbLocation();
+        }
+    </script>
+</body>
+</html>
