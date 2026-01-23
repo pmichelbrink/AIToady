@@ -3,17 +3,26 @@
 <head>
     <title>AIToady Query</title>
     <style>
-        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; background: #fff; color: #333; }
         h1 { color: #333; }
-        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background: #fff; }
         label { display: block; margin: 10px 0 5px; font-weight: bold; }
-        select, textarea, button { padding: 10px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        input, select, textarea, button { padding: 10px; font-size: 14px; width: 100%; box-sizing: border-box; background: #fff; color: #333; border: 1px solid #ddd; }
         button { background: #007bff; color: white; border: none; cursor: pointer; margin-top: 10px; }
         button:hover { background: #0056b3; }
         button:disabled { background: #ccc; cursor: not-allowed; }
         textarea { min-height: 100px; resize: vertical; }
         .answer { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; white-space: pre-wrap; }
         .loading { color: #666; font-style: italic; }
+        
+        @media (prefers-color-scheme: dark) {
+            body { background: #1e1e1e; color: #e0e0e0; }
+            h1 { color: #e0e0e0; }
+            .section { border-color: #444; background: #2d2d2d; }
+            input, select, textarea { background: #3a3a3a; color: #e0e0e0; border-color: #555; }
+            .answer { background: #3a3a3a; }
+            .loading { color: #aaa; }
+        }
     </style>
 </head>
 <body>
