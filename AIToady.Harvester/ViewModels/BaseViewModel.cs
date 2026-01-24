@@ -1,15 +1,11 @@
 using AIToady.Harvester.Models;
 using AIToady.Infrastructure;
 using AIToady.Infrastructure.Services;
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 
@@ -795,7 +791,7 @@ namespace AIToady.Harvester.ViewModels
         }
         public int GetRandomizedDelay()
         {
-            int delay = _random.Next(PageLoadDelay, PageLoadDelay * 3 + 1) * 1000;
+            int delay = _random.Next(PageLoadDelay, PageLoadDelay * 2 + 1) * 700;
             return delay;
         }
 
@@ -858,7 +854,7 @@ namespace AIToady.Harvester.ViewModels
             NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
             ThreadElement = string.IsNullOrEmpty(Properties.Settings.Default.ThreadElement) ? "structItem-title" : Properties.Settings.Default.ThreadElement;
             ThreadsToSkip = Properties.Settings.Default.ThreadsToSkip;
-            PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 6 : Properties.Settings.Default.PageLoadDelay;
+            PageLoadDelay = Properties.Settings.Default.PageLoadDelay == 0 ? 4 : Properties.Settings.Default.PageLoadDelay;
             RootFolder = string.IsNullOrEmpty(Properties.Settings.Default.RootFolder) ? GetDriveWithMostFreeSpace() : Properties.Settings.Default.RootFolder;
             StartTime = string.IsNullOrEmpty(Properties.Settings.Default.StartTime) ? "09:00" : Properties.Settings.Default.StartTime;
             EndTime = string.IsNullOrEmpty(Properties.Settings.Default.EndTime) ? "23:59" : Properties.Settings.Default.EndTime;
