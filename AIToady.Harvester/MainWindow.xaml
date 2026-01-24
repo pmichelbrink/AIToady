@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:AIToady.Harvester"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="AI Toady Harvester" Height="450" Width="1000">
+        Title="AI Toady Harvester" Height="450" Width="1000"
+        UseLayoutRounding="True">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -259,11 +260,16 @@
                     </Grid>
                 </Grid>
             </GroupBox>
+            <CheckBox Grid.Column="6"
+                      Content="🌙 Dark Mode"
+                      IsChecked="{Binding DarkMode}"
+                      VerticalAlignment="Center"
+                      Margin="5,0" />
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5,0"/>
         
-        <ListView Grid.Row="4" ItemsSource="{Binding LogEntries}" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListView x:Name="LogListView" Grid.Row="4" ItemsSource="{Binding LogEntries}" Margin="5" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="Log" Width="600" DisplayMemberBinding="{Binding Log}">

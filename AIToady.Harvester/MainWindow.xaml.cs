@@ -39,6 +39,7 @@ namespace AIToady.Harvester
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             _viewModel.PromptUserInputRequested += PromptUserForInput;
+            _viewModel.PropertyChanged += (s, e) => { if (e.PropertyName == "DarkMode") ApplyTheme(); };
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
@@ -75,6 +76,9 @@ namespace AIToady.Harvester
             
             // Set password box value after loading settings
             EmailPasswordBox.Password = _viewModel.EmailPassword;
+            
+            // Apply initial theme
+            Loaded += (s, e) => ApplyTheme();
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -573,6 +577,76 @@ namespace AIToady.Harvester
         {
             var passwordBox = sender as PasswordBox;
             _viewModel.EmailPassword = passwordBox?.Password ?? "";
+        }
+
+        private void ApplyTheme()
+        {
+            var bg = _viewModel.DarkMode ? "#1E1E1E" : "#FFFFFF";
+            var fg = _viewModel.DarkMode ? "#FFFFFF" : "#000000";
+            var controlBg = _viewModel.DarkMode ? "#2D2D30" : "#FFFFFF";
+            var borderBrush = _viewModel.DarkMode ? "#3F3F46" : "#ABADB3";
+            
+            Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(bg);
+            Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+            
+            LogListView.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(controlBg);
+            LogListView.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+            LogListView.BorderBrush = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(borderBrush);
+            
+            if (_viewModel.DarkMode)
+                SetWindowChromeDark();
+            else
+                SetWindowChromeLight();
+            
+            foreach (var element in FindVisualChildren<Control>(this))
+            {
+                if (element is TextBox || element is ComboBox)
+                {
+                    element.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(controlBg);
+                    element.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+                    element.BorderBrush = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(borderBrush);
+                }
+                else if (element is Label || element is CheckBox || element is GroupBox)
+                {
+                    element.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+                }
+            }
+        }
+        
+        private void SetWindowChromeDark()
+        {
+            if (System.Environment.OSVersion.Version.Build >= 22000)
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                int value = 1;
+                DwmSetWindowAttribute(hwnd, 20, ref value, sizeof(int));
+            }
+        }
+        
+        private void SetWindowChromeLight()
+        {
+            if (System.Environment.OSVersion.Version.Build >= 22000)
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                int value = 0;
+                DwmSetWindowAttribute(hwnd, 20, ref value, sizeof(int));
+            }
+        }
+        
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj != null)
+            {
+                for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
+                {
+                    var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
+                    if (child is T t) yield return t;
+                    foreach (var childOfChild in FindVisualChildren<T>(child)) yield return childOfChild;
+                }
+            }
         }
     }
 }
