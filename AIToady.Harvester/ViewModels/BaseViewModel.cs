@@ -37,6 +37,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _stopAfterCurrentPage = false;
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
+        protected bool _darkMode = false;
         protected List<string> _threadLinks = new List<string>();
         protected HashSet<string> _badDomains = new HashSet<string>
         {
@@ -194,6 +195,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _hoursOfOperationEnabled;
             set => SetProperty(ref _hoursOfOperationEnabled, value);
+        }
+
+        public bool DarkMode
+        {
+            get => _darkMode;
+            set => SetProperty(ref _darkMode, value);
         }
 
         public List<string> ThreadLinks => _threadLinks;
