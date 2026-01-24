@@ -611,6 +611,17 @@ namespace AIToady.Harvester
                     element.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
                 }
             }
+            
+            foreach (var header in FindVisualChildren<GridViewColumnHeader>(this))
+            {
+                header.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(controlBg);
+                header.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+            }
+            
+            foreach (var button in FindVisualChildren<Button>(LogListView))
+            {
+                button.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+            }
         }
         
         private void SetWindowChromeDark()

@@ -169,7 +169,8 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <GroupBox Grid.Column="4"
-                      Header="Email">
+                      Header="Email"
+                      BorderThickness=".3">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition></ColumnDefinition>
@@ -199,6 +200,7 @@
             </GroupBox>
             <GroupBox Grid.Column="5"
                       Header="Hours of Operation"
+                      BorderThickness=".5"
                       Margin="5,0"
                       Height="58">
                 <Grid>
