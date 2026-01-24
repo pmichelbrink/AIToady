@@ -76,6 +76,9 @@ namespace AIToady.Harvester
             
             // Set password box value after loading settings
             EmailPasswordBox.Password = _viewModel.EmailPassword;
+            
+            // Apply initial theme
+            Loaded += (s, e) => ApplyTheme();
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)

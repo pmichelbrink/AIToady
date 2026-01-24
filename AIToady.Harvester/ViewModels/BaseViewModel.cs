@@ -37,7 +37,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _stopAfterCurrentPage = false;
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
-        protected bool _darkMode = false;
+        protected bool _darkMode = true;
         protected List<string> _threadLinks = new List<string>();
         protected HashSet<string> _badDomains = new HashSet<string>
         {
@@ -821,6 +821,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailAccount = EmailAccount;
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
+            Properties.Settings.Default.DarkMode = DarkMode;
             Properties.Settings.Default.Save();
         }
 
@@ -871,6 +872,7 @@ namespace AIToady.Harvester.ViewModels
             EmailAccount = Properties.Settings.Default.EmailAccount ?? "";
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
             Category = Properties.Settings.Default.Category ?? "";
+            DarkMode = Properties.Settings.Default.DarkMode;
         }
         public void InitializeOperatingHoursTimer()
         {
