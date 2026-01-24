@@ -1,4 +1,4 @@
-﻿using AIToady.Harvester.Models;
+using AIToady.Harvester.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -103,40 +103,38 @@ namespace AIToady.Harvester.ViewModels
                         let attachments = [];
                         
                         if (messageBodyElement) {
-                            // Extract images from bbImage elements
+                            // Extract images from bbImage elements in message body
                             messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
                                 let imageUrl = img.getAttribute('data-url') || img.getAttribute('data-src') || img.src;
                                 if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
-                                    // Remove query parameters to get clean image URL
                                     imageUrl = imageUrl.split('?')[0];
                                     if (imageUrl && !images.includes(imageUrl)) {
                                         images.push(imageUrl);
                                     }
                                 }
                             });
-                            
-                            // Extract images from lbContainer elements
-                            messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
-                                let imageUrl = zoomer.getAttribute('data-src');
-                                if (imageUrl) {
-                                    // Remove query parameters to get clean image URL
-                                    imageUrl = imageUrl.split('?')[0];
-                                    if (imageUrl && !images.includes(imageUrl)) {
-                                        images.push(imageUrl);
-                                    }
-                                }
-                            });
-                            
-                            // Extract attachment files from attachmentList
-                            let attachmentUrls = new Set();
-                            messageDiv.querySelectorAll('.attachmentList .attachment .attachment-name a').forEach(element => {
-                                let attachmentUrl = element.href;
-                                if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
-                                    attachmentUrls.add(attachmentUrl);
-                                }
-                            });
-                            attachments = Array.from(attachmentUrls);
                         }
+                        
+                        // Extract images from lbContainer elements in entire message container
+                        messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
+                            let imageUrl = zoomer.getAttribute('data-src');
+                            if (imageUrl) {
+                                imageUrl = imageUrl.split('?')[0];
+                                if (imageUrl && !images.includes(imageUrl)) {
+                                    images.push(imageUrl);
+                                }
+                            }
+                        });
+                        
+                        // Extract attachment files from attachmentList in entire message container
+                        let attachmentUrls = new Set();
+                        messageDiv.querySelectorAll('.attachmentList .attachment .attachment-name a').forEach(element => {
+                            let attachmentUrl = element.href;
+                            if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
+                                attachmentUrls.add(attachmentUrl);
+                            }
+                        });
+                        attachments = Array.from(attachmentUrls);
                         
                         if (messageBodyElement) {
                             let postId = '';
@@ -160,68 +158,6 @@ namespace AIToady.Harvester.ViewModels
                             messages.push({
                                 postId: postId,
                                 username: username,
-                                message: messageBodyElement.textContent.trim().replace(/\\s+/g, ' '),
-                                timestamp: timestamp,
-                                images: images,
-                                attachments: attachments
-                            });
-                        }
-                    });
-                    
-                    // Handle message-content elements
-                    document.querySelectorAll('.message-content').forEach(messageDiv => {
-                        let messageBodyElement = messageDiv.querySelector('.message-body');
-                        let timeElement = messageDiv.querySelector('.u-dt, time');
-                        let images = [];
-                        let attachments = [];
-                        
-                        if (messageBodyElement) {
-                            // Extract images
-                            messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {
-                                let imageUrl = img.getAttribute('data-url') || img.getAttribute('data-src') || img.src;
-                                if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {
-                                    imageUrl = imageUrl.split('?')[0];
-                                    if (imageUrl && !images.includes(imageUrl)) {
-                                        images.push(imageUrl);
-                                    }
-                                }
-                            });
-                            
-                            messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
-                                let imageUrl = zoomer.getAttribute('data-src');
-                                if (imageUrl) {
-                                    imageUrl = imageUrl.split('?')[0];
-                                    if (imageUrl && !images.includes(imageUrl)) {
-                                        images.push(imageUrl);
-                                    }
-                                }
-                            });
-                            
-                            // Extract attachments
-                            let attachmentUrls = new Set();
-                            messageDiv.querySelectorAll('.attachmentList .attachment .attachment-name a').forEach(element => {
-                                let attachmentUrl = element.href;
-                                if (attachmentUrl && attachmentUrl.includes('/attachments/')) {
-                                    attachmentUrls.add(attachmentUrl);
-                                }
-                            });
-                            attachments = Array.from(attachmentUrls);
-                            
-                            // Extract post ID from data-lb-id
-                            let postId = '';
-                            let lbContainer = messageDiv.querySelector('[data-lb-id]');
-                            if (lbContainer) {
-                                let dataLbId = lbContainer.getAttribute('data-lb-id');
-                                if (dataLbId && dataLbId.startsWith('post-')) {
-                                    postId = dataLbId.replace('post-', '');
-                                }
-                            }
-                            
-                            let timestamp = timeElement ? (timeElement.getAttribute('datetime') || timeElement.getAttribute('title') || timeElement.textContent) : '';
-                            
-                            messages.push({
-                                postId: postId,
-                                username: 'Unknown User',
                                 message: messageBodyElement.textContent.trim().replace(/\\s+/g, ' '),
                                 timestamp: timestamp,
                                 images: images,

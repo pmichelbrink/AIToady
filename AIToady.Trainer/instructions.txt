@@ -1,0 +1,9 @@
+Run python trainer.py in the AIToady.Trainer directory
+
+Open http://localhost:5001
+
+Add your JSON folder paths
+
+Select base model
+
+Click Start Training and watch the progress!
