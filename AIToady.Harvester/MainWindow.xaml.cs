@@ -223,6 +223,13 @@ namespace AIToady.Harvester
         {
             try
             {
+
+                // Skip HttpClient for AR15ViewModel (gunboards.com has bot protection)
+                if (_viewModel is TheAKForumViewModel)
+                {
+                    throw new System.Net.Http.HttpRequestException($"HTTP 409");
+                }
+
                 // Handle Flickr album links
                 if (imageUrl.Contains("flickr.com") && imageUrl.Contains("/in/set-"))
                 {
@@ -300,8 +307,8 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
-                        return ex.Message;
+                    //if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
+                    //    return ex.Message;
 
                     string currentUrl = WebView.Source?.ToString();
                     WebView.Source = new Uri(imageUrl);
