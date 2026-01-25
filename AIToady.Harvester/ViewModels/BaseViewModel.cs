@@ -489,13 +489,15 @@ namespace AIToady.Harvester.ViewModels
                 {
                     url = "https://" + url;
                 }
-                
-                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host.Contains("theakforum") && GetType() != typeof(TheAKForumViewModel))
+
+                Uri.TryCreate(url, UriKind.Absolute, out var uri);
+
+                if ((uri.Host.Contains("theakforum") || uri.Host.Contains("gunboards")) && GetType() != typeof(TheAKForumViewModel))
                 {
                     ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.TheAKForum);
                     return;
                 }
-                else if (Uri.TryCreate(url, UriKind.Absolute, out var arUri) && arUri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
+                else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
                 {
                     ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
                     return;
