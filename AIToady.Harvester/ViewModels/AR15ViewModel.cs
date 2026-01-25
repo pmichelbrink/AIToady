@@ -1,4 +1,4 @@
-﻿using AIToady.Harvester.Models;
+using AIToady.Harvester.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,16 +17,30 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
-                string script = @"
-                    (function() {
-                        let parentDiv = document.querySelector('div.expanded.column.row.skin-dark.white.barpad');
-                        if (parentDiv) {
-                            let childDiv = parentDiv.querySelector('div.column');
-                            return childDiv ? childDiv.textContent.trim() : '';
-                        }
-                        return '';
-                    })()
-                ";
+                string script;
+                if (Url.Contains("/archive/"))
+                {
+                    script = @"
+                        (function() {
+                            let parentDiv = document.querySelector('div.expanded.column.row.skin-dark.white.barpad');
+                            if (parentDiv) {
+                                let childDiv = parentDiv.querySelector('div.column');
+                                return childDiv ? childDiv.textContent.trim() : '';
+                            }
+                            return '';
+                        })()
+                    ";
+                }
+                else
+                {
+                    script = @"
+                        (function() {
+                            let h5 = document.querySelector('h5.tw-text-base.tw-font-semibold.lg\\:tw-h5');
+                            return h5 ? h5.textContent.trim() : '';
+                        })()
+                    ";
+                }
+
                 string result = await InvokeExecuteScriptRequested(script);
                 if (!string.IsNullOrEmpty(result))
                 {
@@ -53,17 +67,42 @@ namespace AIToady.Harvester.ViewModels
                     return;
                 }
 
-                string script = @"
-                    let linkSet = new Set();
-                    let uls = document.querySelectorAll('ul');
-                    uls.forEach(ul => {
-                        let anchors = ul.querySelectorAll('li a');
+                // Debug: Get HTML
+                //string htmlScript = "document.documentElement.outerHTML";
+                //string html = await InvokeExecuteScriptRequested(htmlScript);
+                //html = JsonSerializer.Deserialize<string>(html);
+                //string debugPath = Path.Combine(Path.GetTempPath(), "webview_debug.html");
+                //File.WriteAllText(debugPath, html);
+                //AddLogEntry($"HTML saved to: {debugPath}");
+
+                string script;
+                if (!Url.Contains("/archive/"))
+                {
+                    script = @"
+                        let linkSet = new Set();
+                        let anchors = document.querySelectorAll('a.tw-align-middle.tw-text-\\[0\\.9rem\\]');
                         anchors.forEach(a => {
-                            if (a.href && a.href.includes('/forums/')) linkSet.add(a.href);
+                            if (a.href && a.href.includes('/forums/')) {
+                                linkSet.add(a.href);
+                            }
                         });
-                    });
-                    JSON.stringify(Array.from(linkSet));
-                ";
+                        JSON.stringify(Array.from(linkSet));
+                    ";
+                }
+                else
+                {
+                    string className = ThreadElement.Trim().TrimStart('.');
+                    script = $@"
+                        let linkSet = new Set();
+                        let anchors = document.querySelectorAll('a.{className}');
+                        anchors.forEach(a => {{
+                            if (a.href && a.href.includes('/forums/') && !a.href.includes('&page=')) {{
+                                linkSet.add(a.href);
+                            }}
+                        }});
+                        JSON.stringify(Array.from(linkSet));
+                    ";
+                }
 
                 string result = await InvokeExecuteScriptRequested(script);
                 result = JsonSerializer.Deserialize<string>(result);
@@ -103,13 +142,17 @@ namespace AIToady.Harvester.ViewModels
             {
                 string script = @"
             (function() {
-                let nextLink = document.querySelector('a[href*=""?page=""]');
-                if (nextLink && nextLink.textContent.includes('Next Page')) {
-                    return nextLink.getAttribute('href');
+                let links = document.querySelectorAll('a[href*=""?page=""]');
+                for (let link of links) {
+                    let span = link.querySelector('span');
+                    if (span && span.textContent.trim() === 'Next Page') {
+                        return link.getAttribute('href');
+                    }
                 }
                 return 'not_found';
             })()
         ";
+                
                 string result = await InvokeExecuteScriptRequested(script);
 
                 if (string.IsNullOrEmpty(result))
