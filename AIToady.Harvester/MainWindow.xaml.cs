@@ -24,6 +24,7 @@ namespace AIToady.Harvester
         private bool _isCapturingElement = false;
         private bool _isThreadElementCapture = false;
         private bool _isMessageElementCapture = false;
+        private HashSet<string> _domains409 = new HashSet<string>();
 
         public MainWindow()
         {
@@ -223,18 +224,13 @@ namespace AIToady.Harvester
         {
             try
             {
-
-                // Skip HttpClient for AR15ViewModel (gunboards.com has bot protection)
-                if (_viewModel is TheAKForumViewModel)
-                {
-                    throw new System.Net.Http.HttpRequestException($"HTTP 409");
-                }
-
                 // Handle Flickr album links
                 if (imageUrl.Contains("flickr.com") && imageUrl.Contains("/in/set-"))
-                {
                     return await ExtractFlickrAlbum(imageUrl, filePath);
-                }
+
+                // Skip HttpClient for domains that previously returned 409
+                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) && _domains409.Contains(uri.Host))
+                    throw new System.Net.Http.HttpRequestException($"HTTP 409");
 
                 // First try simple HttpClient approach
                 using (var httpClient = new System.Net.Http.HttpClient())
@@ -258,7 +254,12 @@ namespace AIToady.Harvester
                     var response = await httpClient.GetAsync(imageUrl);
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new System.Net.Http.HttpRequestException($"HTTP {(int)response.StatusCode}");
+                        int statusCode = (int)response.StatusCode;
+                        if (statusCode == 409 && Uri.TryCreate(imageUrl, UriKind.Absolute, out var errorUri))
+                        {
+                            _domains409.Add(errorUri.Host);
+                        }
+                        throw new System.Net.Http.HttpRequestException($"HTTP {statusCode}");
                     }
                     var imageBytes = await response.Content.ReadAsByteArrayAsync();
 
