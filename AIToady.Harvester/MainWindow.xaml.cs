@@ -248,7 +248,12 @@ namespace AIToady.Harvester
                     httpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
                     httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
 
-                    var imageBytes = await httpClient.GetByteArrayAsync(imageUrl);
+                    var response = await httpClient.GetAsync(imageUrl);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new System.Net.Http.HttpRequestException($"HTTP {(int)response.StatusCode}");
+                    }
+                    var imageBytes = await response.Content.ReadAsByteArrayAsync();
 
                     // Check if content is HTML (captcha page)
                     string content = System.Text.Encoding.UTF8.GetString(imageBytes.Take(100).ToArray());
