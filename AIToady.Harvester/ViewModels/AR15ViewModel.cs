@@ -13,7 +13,7 @@ namespace AIToady.Harvester.ViewModels
         {
             
         }
-        protected override async Task ExtractForumName()
+        protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
         {
             try
             {
@@ -33,7 +33,9 @@ namespace AIToady.Harvester.ViewModels
                     result = JsonSerializer.Deserialize<string>(result);
                     if (!string.IsNullOrEmpty(result))
                     {
-                        Category = await PromptUserInput("Enter Category (optional):");
+                        if (!skipCategoryPrompt)
+                            Category = await PromptUserInput("Enter Category (optional):");
+
                         ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                     }
                 }

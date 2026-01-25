@@ -287,5 +287,17 @@ namespace AIToady.Harvester.Properties {
                 this["DarkMode"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ScheduleForums {
+            get {
+                return ((string)(this["ScheduleForums"]));
+            }
+            set {
+                this["ScheduleForums"] = value;
+            }
+        }
     }
 }

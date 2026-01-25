@@ -34,6 +34,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
         protected bool _darkMode = true;
+        protected ObservableCollection<string> _scheduleForums = new ObservableCollection<string>();
         protected List<string> _threadLinks = new List<string>();
         protected HashSet<string> _badDomains = new HashSet<string>
         {
@@ -45,7 +46,7 @@ namespace AIToady.Harvester.ViewModels
             "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com",
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
-            "62x54r.net", "zombieboxes.com"
+            "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -199,6 +200,8 @@ namespace AIToady.Harvester.ViewModels
             set => SetProperty(ref _darkMode, value);
         }
 
+        public ObservableCollection<string> ScheduleForums => _scheduleForums;
+
         public List<string> ThreadLinks => _threadLinks;
 
         public string EmailAccount
@@ -281,7 +284,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    await _emailService.SendEmailAsync("Test@gmail.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
+                    await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
                     System.Media.SystemSounds.Beep.Play();
                 }
 
@@ -294,7 +297,29 @@ namespace AIToady.Harvester.ViewModels
             }
 
             if (_isHarvesting)
-                StopHarvesting();
+            {
+                if (!_stopAfterCurrentPage && _scheduleForums.Count > 0)
+                {
+                    await StartNextForum();
+                }
+                else
+                {
+                    StopHarvesting();
+                }
+            }
+        }
+
+        private async Task StartNextForum()
+        {
+            var nextForum = _scheduleForums.First();
+            _scheduleForums.RemoveAt(0);
+            AddLogEntry($"Loading next scheduled forum: {nextForum}");
+            await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
+            Url = nextForum;
+            ExecuteGo(true);
+            await Task.Delay(3000);
+            _isHarvesting = false;
+            ExecuteStartHarvesting();
         }
 
         private bool IsReadyToHarvest()
@@ -478,9 +503,9 @@ namespace AIToady.Harvester.ViewModels
         {
             return await CheckIfNextPageExists();
         }
-        protected virtual async Task ExtractForumName() { }
+        protected virtual async Task ExtractForumName(bool skipCategoryPrompt = false) { }
 
-        public virtual async void ExecuteGo()
+        public virtual async void ExecuteGo(bool skipCategoryPrompt = false)
         {
             if (!string.IsNullOrEmpty(Url))
             {
@@ -503,7 +528,7 @@ namespace AIToady.Harvester.ViewModels
 
                 NavigateRequested?.Invoke(url);
                 await Task.Delay(2000);
-                await ExtractForumName();
+                await ExtractForumName(skipCategoryPrompt);
             }
         }
 
@@ -782,9 +807,9 @@ namespace AIToady.Harvester.ViewModels
         public BaseViewModel()
         {
             LoadSettings();
-            GoCommand = new RelayCommand(ExecuteGo);
+            GoCommand = new RelayCommand(() => ExecuteGo());
             NextCommand = new RelayCommand(ExecuteNext);
-            StartHarvestingCommand = new RelayCommand(ExecuteStartHarvesting, () => !_isHarvesting || _threadLinks.Count > 0);
+            StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadLinks.Count > 0);
 
             InitializeOperatingHoursTimer();
             InitializeConnectionMonitor();
@@ -818,6 +843,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.DarkMode = DarkMode;
+            Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduleForums);
             Properties.Settings.Default.Save();
         }
 
@@ -869,6 +895,13 @@ namespace AIToady.Harvester.ViewModels
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
             Category = Properties.Settings.Default.Category ?? "";
             DarkMode = Properties.Settings.Default.DarkMode;
+            
+            var forums = Properties.Settings.Default.ScheduleForums ?? "";
+            if (!string.IsNullOrEmpty(forums))
+            {
+                foreach (var forum in forums.Split('|'))
+                    _scheduleForums.Add(forum);
+            }
         }
         public void InitializeOperatingHoursTimer()
         {

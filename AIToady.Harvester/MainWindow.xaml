@@ -267,6 +267,11 @@
                       IsChecked="{Binding DarkMode}"
                       VerticalAlignment="Center"
                       Margin="5,0" />
+            <Button Grid.Column="7"
+                    Content="Schedule Forums"
+                    Height="25"
+                    Click="ScheduleForumsButton_Click"
+                    Margin="5,0" />
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5,0"/>

@@ -13,7 +13,7 @@ namespace AIToady.Harvester.ViewModels
         {
             
         }
-        protected override async Task ExtractForumName()
+        protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
         {
             try
             {

@@ -579,6 +579,15 @@ namespace AIToady.Harvester
             _viewModel.EmailPassword = passwordBox?.Password ?? "";
         }
 
+        private void ScheduleForumsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new ScheduleForumsWindow(_viewModel.ScheduleForums, _viewModel.DarkMode)
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+        }
+
         private void ApplyTheme()
         {
             var bg = _viewModel.DarkMode ? "#1E1E1E" : "#FFFFFF";

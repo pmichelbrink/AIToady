@@ -12,7 +12,7 @@ namespace AIToady.Harvester.ViewModels
     /// </summary>
     public class MainViewModel : BaseViewModel
     {
-        protected override async Task ExtractForumName()
+        protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
         {
             try
             {
