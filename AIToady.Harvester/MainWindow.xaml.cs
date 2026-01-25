@@ -300,8 +300,8 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
-                        return ex.Message;
+                    //if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
+                    //    return ex.Message;
 
                     string currentUrl = WebView.Source?.ToString();
                     WebView.Source = new Uri(imageUrl);
