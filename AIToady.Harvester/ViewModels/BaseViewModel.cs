@@ -233,7 +233,7 @@ namespace AIToady.Harvester.ViewModels
             try
             {
                 var emailService = new EmailService(EmailAccount, EmailPassword);
-                await emailService.SendEmailAsync(EmailAccount, "Test Email", "This is a test email from AIToady Harvester.");
+                await emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Test Email", "This is a test email from AIToady Harvester.");
                 return true;
             }
             catch
@@ -746,7 +746,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            //await _emailService.SendEmailAsync("Test@gmail.com", "Image Error on " + Environment.MachineName, "Body");
+                            //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
                     catch (TaskCanceledException)
