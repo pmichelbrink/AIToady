@@ -185,6 +185,7 @@
                         <ColumnDefinition></ColumnDefinition>
                         <ColumnDefinition></ColumnDefinition>
                         <ColumnDefinition></ColumnDefinition>
+                        <ColumnDefinition></ColumnDefinition>
                     </Grid.ColumnDefinitions>
                     <Label Content="Account:"
                            VerticalAlignment="Center" />
@@ -203,6 +204,12 @@
                                  Height="25"
                                  VerticalContentAlignment="Center"
                                  PasswordChanged="EmailPasswordBox_PasswordChanged" />
+                    <Button Grid.Column="4"
+                            Content="Test"
+                            Width="50"
+                            Height="25"
+                            Margin="5,0,0,0"
+                            Click="TestEmailButton_Click" />
                 </Grid>
             </GroupBox>
             <GroupBox Grid.Column="5"

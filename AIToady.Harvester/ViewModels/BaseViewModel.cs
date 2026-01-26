@@ -228,6 +228,20 @@ namespace AIToady.Harvester.ViewModels
         public ICommand StartHarvestingCommand { get; protected set; }
         public ICommand ScheduleCommand { get; protected set; }
 
+        public async Task<bool> TestEmail()
+        {
+            try
+            {
+                var emailService = new EmailService(EmailAccount, EmailPassword);
+                await emailService.SendEmailAsync(EmailAccount, "Test Email", "This is a test email from AIToady Harvester.");
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -732,7 +746,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            await _emailService.SendEmailAsync("Test@gmail.com", "Image Error on " + Environment.MachineName, "Body");
+                            //await _emailService.SendEmailAsync("Test@gmail.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
                     catch (TaskCanceledException)

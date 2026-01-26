@@ -609,6 +609,13 @@ namespace AIToady.Harvester
             window.ShowDialog();
         }
 
+        private async void TestEmailButton_Click(object sender, RoutedEventArgs e)
+        {
+            var success = await _viewModel.TestEmail();
+            MessageBox.Show(this, success ? "Test email sent successfully!" : "Failed to send test email. Check your credentials.",
+                "Email Test", MessageBoxButton.OK, success ? MessageBoxImage.Information : MessageBoxImage.Error);
+        }
+
         private void ApplyTheme()
         {
             var bg = _viewModel.DarkMode ? "#1E1E1E" : "#FFFFFF";
