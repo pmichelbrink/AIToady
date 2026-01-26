@@ -230,7 +230,11 @@ namespace AIToady.Harvester
 
                 // Skip HttpClient for domains that previously returned 409
                 if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) && _domains409.Contains(uri.Host))
-                    throw new System.Net.Http.HttpRequestException($"HTTP 409");
+                {
+                    string result = await ExtractImageWithBrowser(imageUrl, filePath);
+                    if (result == "success")
+                        return result;
+                }
 
                 // First try simple HttpClient approach
                 using (var httpClient = new System.Net.Http.HttpClient())
@@ -242,9 +246,7 @@ namespace AIToady.Harvester
                     // Add Referer header to mimic browser behavior
                     string currentUrl = WebView.Source?.ToString();
                     if (!string.IsNullOrEmpty(currentUrl))
-                    {
                         httpClient.DefaultRequestHeaders.Add("Referer", currentUrl);
-                    }
                     
                     // Add other common browser headers
                     httpClient.DefaultRequestHeaders.Add("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
@@ -258,7 +260,11 @@ namespace AIToady.Harvester
                         if (statusCode == 409 && Uri.TryCreate(imageUrl, UriKind.Absolute, out var errorUri))
                         {
                             _domains409.Add(errorUri.Host);
+                            string result = await ExtractImageWithBrowser(imageUrl, filePath);
+                            if (result == "success")
+                                return result;
                         }
+
                         throw new System.Net.Http.HttpRequestException($"HTTP {statusCode}");
                     }
                     var imageBytes = await response.Content.ReadAsByteArrayAsync();
@@ -308,14 +314,22 @@ namespace AIToady.Harvester
             {
                 try
                 {
-                    //if (ex.Message.IsTimeoutError() || ex.Message.IsUnavailableError())
-                    //    return ex.Message;
+                    return await ExtractImageWithBrowser(imageUrl, filePath);
+                }
+                catch (Exception ex2)
+                { 
+                    return ex2.Message; 
+                }
+            }
+        }
 
-                    string currentUrl = WebView.Source?.ToString();
-                    WebView.Source = new Uri(imageUrl);
-                    await Task.Delay(4000);
+        private async Task<string> ExtractImageWithBrowser(string imageUrl, string filePath)
+        {
+            string currentUrl = WebView.Source?.ToString();
+            WebView.Source = new Uri(imageUrl);
+            await Task.Delay(2000);
 
-                    string script = @"
+            string script = @"
                     var img = document.querySelector('img');
                     if (img && img.complete) {
                         var canvas = document.createElement('canvas');
@@ -327,28 +341,22 @@ namespace AIToady.Harvester
                     } else null;
                 ";
 
-                    string result = await WebView.ExecuteScriptAsync(script);
-                    if (!string.IsNullOrEmpty(currentUrl))
-                        WebView.Source = new Uri(currentUrl);
+            string result = await WebView.ExecuteScriptAsync(script);
+            if (!string.IsNullOrEmpty(currentUrl))
+                WebView.Source = new Uri(currentUrl);
 
-                    do
-                        await Task.Delay(500);
-                    while (currentUrl != WebView.Source?.ToString());
+            do
+                await Task.Delay(500);
+            while (currentUrl != WebView.Source?.ToString());
 
-                    if (!string.IsNullOrEmpty(result) && result != "null")
-                    {
-                        result = result.Trim('"');
-                        var imageBytes = Convert.FromBase64String(result);
-                        await File.WriteAllBytesAsync(filePath, imageBytes);
-                        return "success";
-                    }
-                    return ex.Message;
-                }
-                catch (Exception ex2)
-                { 
-                    return ex2.Message; 
-                }
+            if (!string.IsNullOrEmpty(result) && result != "null")
+            {
+                result = result.Trim('"');
+                var imageBytes = Convert.FromBase64String(result);
+                await File.WriteAllBytesAsync(filePath, imageBytes);
+                return "success";
             }
+            return "ExtractImageWithBrowser Failed";
         }
 
         private async void WebView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
