@@ -313,7 +313,7 @@ namespace AIToady.Harvester
 
                     string currentUrl = WebView.Source?.ToString();
                     WebView.Source = new Uri(imageUrl);
-                    await Task.Delay(2000);
+                    await Task.Delay(4000);
 
                     string script = @"
                     var img = document.querySelector('img');
