@@ -91,17 +91,17 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    string className = ThreadElement.Trim().TrimStart('.');
-                    script = $@"
-                        let linkSet = new Set();
-                        let anchors = document.querySelectorAll('a.{className}');
-                        anchors.forEach(a => {{
-                            if (a.href && a.href.includes('/forums/') && !a.href.includes('&page=')) {{
-                                linkSet.add(a.href);
-                            }}
-                        }});
-                        JSON.stringify(Array.from(linkSet));
-                    ";
+                    script = @"
+                    let linkSet = new Set();
+                    let uls = document.querySelectorAll('ul');
+                    uls.forEach(ul => {
+                        let anchors = ul.querySelectorAll('li a');
+                        anchors.forEach(a => {
+                            if (a.href && a.href.includes('/forums/')) linkSet.add(a.href);
+                        });
+                    });
+                    JSON.stringify(Array.from(linkSet));
+                ";
                 }
 
                 string result = await InvokeExecuteScriptRequested(script);
