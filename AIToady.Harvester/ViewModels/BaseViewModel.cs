@@ -34,7 +34,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
         protected bool _darkMode = true;
-        protected ObservableCollection<string> _scheduleForums = new ObservableCollection<string>();
+        protected ObservableCollection<string> _scheduledForums = new ObservableCollection<string>();
         protected List<string> _threadLinks = new List<string>();
         protected HashSet<string> _badDomains = new HashSet<string>
         {
@@ -200,7 +200,7 @@ namespace AIToady.Harvester.ViewModels
             set => SetProperty(ref _darkMode, value);
         }
 
-        public ObservableCollection<string> ScheduleForums => _scheduleForums;
+        public ObservableCollection<string> ScheduledForums => _scheduledForums;
 
         public List<string> ThreadLinks => _threadLinks;
 
@@ -299,7 +299,7 @@ namespace AIToady.Harvester.ViewModels
 
             if (_isHarvesting)
             {
-                if (!_stopAfterCurrentPage && _scheduleForums.Count > 0)
+                if (!_stopAfterCurrentPage && _scheduledForums.Count > 0)
                 {
                     await StartNextForum();
                 }
@@ -312,8 +312,8 @@ namespace AIToady.Harvester.ViewModels
 
         private async Task StartNextForum()
         {
-            var nextForum = _scheduleForums.First();
-            _scheduleForums.RemoveAt(0);
+            var nextForum = _scheduledForums.First();
+            _scheduledForums.RemoveAt(0);
             AddLogEntry($"Loading next scheduled forum: {nextForum}");
             await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
             Url = nextForum;
@@ -821,9 +821,9 @@ namespace AIToady.Harvester.ViewModels
 
         public void ExecuteSchedule()
         {
-            if (!string.IsNullOrEmpty(Url) && !_scheduleForums.Contains(Url))
+            if (!string.IsNullOrEmpty(Url) && !_scheduledForums.Contains(Url))
             {
-                _scheduleForums.Add(Url);
+                _scheduledForums.Add(Url);
                 SaveSettings();
                 ShowScheduledForumsToast();
             }
@@ -835,10 +835,10 @@ namespace AIToady.Harvester.ViewModels
             {
                 var builder = new ToastContentBuilder();
                 
-                if (_scheduleForums.Any())
+                if (_scheduledForums.Any())
                 {
                     builder.AddText($"Added to scheduled forums:{Environment.NewLine}");
-                    var shortened = _scheduleForums.Take(3).Select(f => f.Length > 50 ? string.Concat(f.AsSpan(0, 47), "...") : f);
+                    var shortened = _scheduledForums.Take(3).Select(f => f.Length > 50 ? string.Concat(f.AsSpan(0, 47), "...") : f);
                     builder.AddText(string.Join(Environment.NewLine, shortened));
                 }
                 
@@ -878,7 +878,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.DarkMode = DarkMode;
-            Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduleForums);
+            Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
             Properties.Settings.Default.Save();
         }
 
@@ -935,7 +935,7 @@ namespace AIToady.Harvester.ViewModels
             if (!string.IsNullOrEmpty(forums))
             {
                 foreach (var forum in forums.Split('|'))
-                    _scheduleForums.Add(forum);
+                    _scheduledForums.Add(forum);
             }
         }
         public void InitializeOperatingHoursTimer()

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace AIToady.Harvester
 {
@@ -8,6 +9,7 @@ namespace AIToady.Harvester
     {
         private ObservableCollection<string> _forums;
         private bool _darkMode;
+        private static string _lastExportPath = "";
 
         public ScheduleForumsWindow(ObservableCollection<string> forums, bool darkMode)
         {
@@ -15,7 +17,17 @@ namespace AIToady.Harvester
             _forums = forums;
             _darkMode = darkMode;
             ForumsListBox.ItemsSource = _forums;
+            _forums.CollectionChanged += (s, e) => ExportButton.IsEnabled = _forums.Count > 0;
+            ExportButton.IsEnabled = _forums.Count > 0;
             Loaded += (s, e) => ApplyTheme();
+        }
+
+        private void ForumAddressTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                AddButton_Click(sender, e);
+            }
         }
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
@@ -33,6 +45,53 @@ namespace AIToady.Harvester
             var selected = ForumsListBox.SelectedItems.Cast<string>().ToList();
             foreach (var item in selected)
                 _forums.Remove(item);
+        }
+
+        private void ImportButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                Multiselect = true
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                foreach (var file in dialog.FileNames)
+                {
+                    var lines = System.IO.File.ReadAllLines(file);
+                    foreach (var line in lines)
+                    {
+                        var trimmed = line.Trim();
+                        if (!string.IsNullOrEmpty(trimmed) && !_forums.Contains(trimmed))
+                            _forums.Add(trimmed);
+                    }
+                }
+            }
+        }
+
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_forums.Count == 0) return;
+
+            string defaultFileName = "ScheduledForums.txt";
+            if (_forums.Count > 0 && Uri.TryCreate(_forums[0], UriKind.Absolute, out var uri))
+            {
+                defaultFileName = $"{uri.Host.Replace("www.", "").Split('.')[0]}-ScheduledForums.txt";
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = defaultFileName,
+                InitialDirectory = string.IsNullOrEmpty(_lastExportPath) ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : _lastExportPath
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                System.IO.File.WriteAllLines(dialog.FileName, _forums);
+                _lastExportPath = System.IO.Path.GetDirectoryName(dialog.FileName);
+            }
         }
 
         private void ForumsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

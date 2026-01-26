@@ -602,7 +602,7 @@ namespace AIToady.Harvester
 
         private void ScheduleForumsButton_Click(object sender, RoutedEventArgs e)
         {
-            var window = new ScheduleForumsWindow(_viewModel.ScheduleForums, _viewModel.DarkMode)
+            var window = new ScheduleForumsWindow(_viewModel.ScheduledForums, _viewModel.DarkMode)
             {
                 Owner = this
             };
