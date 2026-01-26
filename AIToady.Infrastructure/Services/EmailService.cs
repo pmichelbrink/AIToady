@@ -21,7 +21,8 @@ namespace AIToady.Infrastructure.Services
                 using var client = new SmtpClient("smtp.ethereal.email", 587)
                 {
                     Credentials = new NetworkCredential(_account, _password),
-                    EnableSsl = true
+                    EnableSsl = true,
+                    UseDefaultCredentials = false
                 };
 
                 var message = new MailMessage("test@ethereal.email", toEmail, subject, body);
