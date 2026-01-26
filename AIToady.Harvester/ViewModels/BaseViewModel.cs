@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
-
+using Microsoft.Toolkit.Uwp.Notifications;
 namespace AIToady.Harvester.ViewModels
 {
     public class BaseViewModel : INotifyPropertyChanged
@@ -226,6 +226,7 @@ namespace AIToady.Harvester.ViewModels
         public ICommand NextCommand { get; protected set; }
         public ICommand LoadThreadsCommand { get; protected set; }
         public ICommand StartHarvestingCommand { get; protected set; }
+        public ICommand ScheduleCommand { get; protected set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -812,9 +813,41 @@ namespace AIToady.Harvester.ViewModels
             GoCommand = new RelayCommand(() => ExecuteGo());
             NextCommand = new RelayCommand(ExecuteNext);
             StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadLinks.Count > 0);
+            ScheduleCommand = new RelayCommand(ExecuteSchedule);
 
             InitializeOperatingHoursTimer();
             InitializeConnectionMonitor();
+        }
+
+        public void ExecuteSchedule()
+        {
+            if (!string.IsNullOrEmpty(Url) && !_scheduleForums.Contains(Url))
+            {
+                _scheduleForums.Add(Url);
+                SaveSettings();
+                ShowScheduledForumsToast();
+            }
+        }
+
+        private void ShowScheduledForumsToast()
+        {
+            try
+            {
+                var builder = new ToastContentBuilder();
+                
+                if (_scheduleForums.Any())
+                {
+                    builder.AddText($"Added to scheduled forums:{Environment.NewLine}");
+                    var shortened = _scheduleForums.Take(3).Select(f => f.Length > 50 ? string.Concat(f.AsSpan(0, 47), "...") : f);
+                    builder.AddText(string.Join(Environment.NewLine, shortened));
+                }
+                
+                builder.Show();
+            }
+            catch (Exception ex)
+            {
+                AddLogEntry($"{ShowScheduledForumsToast}: {ex.Message}");
+            }
         }
         public int GetRandomizedDelay()
         {
@@ -1129,9 +1162,15 @@ namespace AIToady.Harvester.ViewModels
                 NextElement = result;
             }
         }
+        [System.Runtime.InteropServices.DllImport("shell32.dll")]
+        static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
 
         public T CloneToViewModel<T>() where T : BaseViewModel, new()
-        {
+        {               
+            // Set AppUserModelID (required for non-UWP apps)
+            string appId = "AIToady.Harvester";
+            SetCurrentProcessExplicitAppUserModelID(appId);
+
             var newViewModel = new T();
             newViewModel._siteName = _siteName;
             newViewModel._forumName = _forumName;
