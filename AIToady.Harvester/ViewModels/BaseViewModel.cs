@@ -746,7 +746,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            AddLogEntry($"Image failed: {result} - {imageUrl}");
+                            AddLogEntry($"{result} - {imageUrl}");
                             //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
