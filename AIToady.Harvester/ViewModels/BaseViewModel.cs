@@ -293,8 +293,10 @@ namespace AIToady.Harvester.ViewModels
                 if (hasNextForumPage)
                 {
                     await Task.Delay(GetRandomizedDelay());
-                    Url = await InvokeExecuteScriptRequested("window.location.href");
-                    Url = JsonSerializer.Deserialize<string>(Url);
+                    var newUrl = await InvokeExecuteScriptRequested("window.location.href");
+                    newUrl = JsonSerializer.Deserialize<string>(newUrl);
+                    if (Utilities.IsValidForumUrl(newUrl))
+                        Url = newUrl;
                     SaveSettings();
                 }
                 else
@@ -330,7 +332,8 @@ namespace AIToady.Harvester.ViewModels
             _scheduledForums.RemoveAt(0);
             AddLogEntry($"Loading next scheduled forum: {nextForum}");
             await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
-            Url = nextForum;
+            if (Utilities.IsValidForumUrl(nextForum))
+                Url = nextForum;
             ExecuteGo(true);
             await Task.Delay(3000);
             _isHarvesting = false;
@@ -599,12 +602,18 @@ namespace AIToady.Harvester.ViewModels
         {
             InvokeNavigateRequested(Url);
             string currentUrl;
+            int retries = 0;
             do
             {
                 await Task.Delay(GetRandomizedDelay());
                 currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
                 currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-            } while (currentUrl != Url && _isHarvesting);
+                if (++retries >= 5 && currentUrl != Url)
+                {
+                    InvokeNavigateRequested(Url);
+                    retries = 0;
+                }
+            } while (Utilities.IsValidForumUrl(currentUrl) && currentUrl != Url && _isHarvesting);
         }
         public int GetPageNumberFromUrl(string url)
         {
@@ -835,7 +844,7 @@ namespace AIToady.Harvester.ViewModels
 
         public void ExecuteSchedule()
         {
-            if (!string.IsNullOrEmpty(Url) && !_scheduledForums.Contains(Url))
+            if (Utilities.IsValidForumUrl(Url) && !_scheduledForums.Contains(Url))
             {
                 _scheduledForums.Add(Url);
                 SaveSettings();
@@ -925,7 +934,9 @@ namespace AIToady.Harvester.ViewModels
         {
             LoadBadDomains();
 
-            Url = Properties.Settings.Default.Url;
+            var savedUrl = Properties.Settings.Default.Url;
+            if (Utilities.IsValidForumUrl(savedUrl))
+                Url = savedUrl;
             NextElement = string.IsNullOrEmpty(Properties.Settings.Default.NextElement) ? ".pageNav-jump--next" : Properties.Settings.Default.NextElement;
             ThreadElement = string.IsNullOrEmpty(Properties.Settings.Default.ThreadElement) ? "structItem-title" : Properties.Settings.Default.ThreadElement;
             ThreadsToSkip = Properties.Settings.Default.ThreadsToSkip;

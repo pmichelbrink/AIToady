@@ -126,11 +126,7 @@ namespace AIToady.Harvester
                 
                 string result = await WebView.ExecuteScriptAsync(script);
                 if (!string.IsNullOrEmpty(currentUrl))
-                    WebView.Source = new Uri(currentUrl);
-
-                do
-                    await Task.Delay(500);
-                while (currentUrl != WebView.Source?.ToString());
+                    await WaitForNavigation(currentUrl);
 
                 if (!string.IsNullOrEmpty(result) && result != "null")
                 {
@@ -220,6 +216,23 @@ namespace AIToady.Harvester
             return "404";
         }
 
+        private async Task WaitForNavigation(string targetUrl, int maxRetries = 5)
+        {
+            WebView.Source = new Uri(targetUrl);
+            await Task.Delay(500);
+
+            int retries = 0;
+            while (WebView.Source?.ToString() != targetUrl)
+            {
+                await Task.Delay(500);
+                if (++retries >= maxRetries)
+                {
+                    WebView.Source = new Uri(targetUrl);
+                    retries = 0;
+                }
+            }
+        }
+
         private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try
@@ -292,11 +305,7 @@ namespace AIToady.Harvester
 
                         string result = await WebView.ExecuteScriptAsync(script);
                         if (!string.IsNullOrEmpty(currentUrl))
-                            WebView.Source = new Uri(currentUrl);
-
-                        do
-                            await Task.Delay(500);
-                        while (currentUrl != WebView.Source?.ToString());
+                            await WaitForNavigation(currentUrl);
 
                         if (!string.IsNullOrEmpty(result) && result != "null")
                         {
@@ -343,11 +352,10 @@ namespace AIToady.Harvester
 
             string result = await WebView.ExecuteScriptAsync(script);
             if (!string.IsNullOrEmpty(currentUrl))
+            {
                 WebView.Source = new Uri(currentUrl);
-
-            do
-                await Task.Delay(500);
-            while (currentUrl != WebView.Source?.ToString());
+                await WaitForNavigation(currentUrl);
+            }
 
             if (!string.IsNullOrEmpty(result) && result != "null")
             {
@@ -364,7 +372,9 @@ namespace AIToady.Harvester
             if (_viewModel.IsHarvesting)
                 return;
 
-            _viewModel.Url = WebView.Source?.ToString() ?? string.Empty;
+            var newUrl = WebView.Source?.ToString() ?? string.Empty;
+            if (Utilities.IsValidForumUrl(newUrl))
+                _viewModel.Url = newUrl;
             
             await WebView.ExecuteScriptAsync(@"
                 function getSelector(element) {
