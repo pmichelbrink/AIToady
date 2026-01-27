@@ -755,6 +755,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
+                            AddLogEntry($"{result} - {imageUrl}");
                             //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
