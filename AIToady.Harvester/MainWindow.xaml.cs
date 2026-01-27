@@ -51,6 +51,12 @@ namespace AIToady.Harvester
                     Dispatcher.Invoke(() => WebView.Reload());
                 };
                 
+                WebView.CoreWebView2.ScriptDialogOpening += async (sender, args) => {
+                    await Task.Delay(5000);
+                    _viewModel.AddLogEntry($"Clicking OK to this alert message: {args.Message}.");
+                    args.Accept();
+                };
+                
                 WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
                     if (_isCapturingElement) {
                         string result = args.TryGetWebMessageAsString();
