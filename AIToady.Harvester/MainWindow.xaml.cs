@@ -186,11 +186,7 @@ namespace AIToady.Harvester
 
                 string result = await WebView.ExecuteScriptAsync(script);
                 if (!string.IsNullOrEmpty(currentUrl))
-                    WebView.Source = new Uri(currentUrl);
-
-                do
-                    await Task.Delay(500);
-                while (currentUrl != WebView.Source?.ToString());
+                    await WaitForNavigation(currentUrl);
 
                 if (!string.IsNullOrEmpty(result) && result != "null")
                 {
