@@ -497,6 +497,11 @@ namespace AIToady.Harvester
             }
         }
 
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            WebView.CoreWebView2?.ExecuteScriptAsync("window.history.back();");
+        }
+
         private void PageLoadDelayTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
         {
             e.Handled = !char.IsDigit(e.Text, 0) || (sender as TextBox)?.Text == "0";
