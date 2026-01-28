@@ -54,7 +54,7 @@ namespace AIToady.Harvester.ViewModels
         protected int _currentThreadIndex = 0;
         protected int _threadImageCounter = 1;
         protected string _threadName;
-        protected System.Timers.Timer _operatingHoursTimer;
+        protected System.Timers.Timer _timer;
         protected ConnectionMonitor _connectionMonitor;
         protected string _emailAccount = "";
         protected string _emailPassword = "";
@@ -66,6 +66,7 @@ namespace AIToady.Harvester.ViewModels
         public event Func<string, Task<string>> ExecuteScriptRequested;
         public event Action<ViewModelType> ViewModelSwitchRequested;
         public event Func<string, Task<string>> PromptUserInputRequested;
+        public event Func<Task> ClearCacheRequested;
         EmailService _emailService;
 
         protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
@@ -839,7 +840,7 @@ namespace AIToady.Harvester.ViewModels
             StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadLinks.Count > 0);
             ScheduleCommand = new RelayCommand(ExecuteSchedule);
 
-            InitializeOperatingHoursTimer();
+            InitializeTimer();
             InitializeConnectionMonitor();
         }
 
@@ -964,11 +965,11 @@ namespace AIToady.Harvester.ViewModels
                     _scheduledForums.Add(forum);
             }
         }
-        public void InitializeOperatingHoursTimer()
+        public void InitializeTimer()
         {
-            _operatingHoursTimer = new System.Timers.Timer(60000); // Check every minute
-            _operatingHoursTimer.Elapsed += (s, e) => CheckOperatingHours();
-            _operatingHoursTimer.Start();
+            _timer = new System.Timers.Timer(3600000); // Check every hour
+            _timer.Elapsed += (s, e) => RunTimerOperations();
+            _timer.Start();
         }
 
         public bool IsWithinOperatingHours()
@@ -983,8 +984,11 @@ namespace AIToady.Harvester.ViewModels
             return currentTime >= startTime && currentTime <= endTime;
         }
 
-        public void CheckOperatingHours()
+        public void RunTimerOperations()
         {
+            if (_url.Contains("gunboards", StringComparison.InvariantCultureIgnoreCase))
+                ClearCacheRequested?.Invoke();
+
             if (_isHarvesting && !IsWithinOperatingHours())
             {
                 StopAfterCurrentPage = true;
@@ -1228,8 +1232,8 @@ namespace AIToady.Harvester.ViewModels
 
         public void Dispose()
         {
-            _operatingHoursTimer?.Stop();
-            _operatingHoursTimer?.Dispose();
+            _timer?.Stop();
+            _timer?.Dispose();
             _connectionMonitor?.Stop();
         }
     }

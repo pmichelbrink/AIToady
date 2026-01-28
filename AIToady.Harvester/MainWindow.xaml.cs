@@ -40,6 +40,7 @@ namespace AIToady.Harvester
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             _viewModel.PromptUserInputRequested += PromptUserForInput;
+            _viewModel.ClearCacheRequested += async () => await WebView.CoreWebView2?.Profile.ClearBrowsingDataAsync();
             _viewModel.PropertyChanged += (s, e) => { if (e.PropertyName == "DarkMode") ApplyTheme(); };
 
 
@@ -586,6 +587,7 @@ namespace AIToady.Harvester
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             _viewModel.PromptUserInputRequested += PromptUserForInput;
+            _viewModel.ClearCacheRequested += async () => await WebView.CoreWebView2?.Profile.ClearBrowsingDataAsync();
             
             _viewModel.ExecuteGo();
         }
