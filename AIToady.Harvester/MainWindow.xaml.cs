@@ -143,15 +143,17 @@ namespace AIToady.Harvester
                 }
 
                 // Check Downloads folder for the file
-                CheckDownloadsFolderForFile(filePath);
+                await CheckDownloadsFolderForFile(filePath);
             }
             catch { }
         }
 
-        private void CheckDownloadsFolderForFile(string filePath)
+        private async Task CheckDownloadsFolderForFile(string filePath)
         {
             try
             {
+                await Task.Delay(5000);
+
                 string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                 string fileName = Path.GetFileName(filePath);
                 string downloadedFile = Path.Combine(downloadsPath, fileName);
@@ -181,6 +183,10 @@ namespace AIToady.Harvester
                         {
                             File.Move(matchingFile, filePath, true);
                             _viewModel.AddLogEntry($"Found attachment in Downloads folder: {matchingFile} and moved to target location: { filePath}.");
+                        }
+                        else if (recentFiles.Any())
+                        {
+                            _viewModel.AddLogEntry($"CheckDownloadsFolderForFile found {recentFiles.Count()} file but didn't any it. This this the first file found: {recentFiles.First()}");
                         }
                     }
                 }
