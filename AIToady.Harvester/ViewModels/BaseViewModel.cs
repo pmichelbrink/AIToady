@@ -609,12 +609,12 @@ namespace AIToady.Harvester.ViewModels
                 await Task.Delay(GetRandomizedDelay());
                 currentUrl = await ExecuteScriptRequested?.Invoke("window.location.href");
                 currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-                if (++retries >= 5 && currentUrl != Url)
+                if (++retries >= 5 && currentUrl?.TrimEnd('/') != Url?.TrimEnd('/'))
                 {
                     InvokeNavigateRequested(Url);
                     retries = 0;
                 }
-            } while (Utilities.IsValidForumUrl(currentUrl) && currentUrl != Url && _isHarvesting);
+            } while (Utilities.IsValidForumUrl(currentUrl) && currentUrl?.TrimEnd('/') != Url?.TrimEnd('/') && _isHarvesting);
         }
         public int GetPageNumberFromUrl(string url)
         {

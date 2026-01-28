@@ -118,7 +118,7 @@ namespace AIToady.Harvester
                 string currentUrl = WebView.Source?.ToString();
                 WebView.Source = new Uri(attachmentUrl);
                 await Task.Delay(3000);
-                
+
                 string script = @"
                     var img = document.querySelector('img');
                     if (img && img.complete) {
@@ -130,7 +130,7 @@ namespace AIToady.Harvester
                         canvas.toDataURL().split(',')[1];
                     } else null;
                 ";
-                
+
                 string result = await WebView.ExecuteScriptAsync(script);
                 if (!string.IsNullOrEmpty(currentUrl))
                     await WaitForNavigation(currentUrl);
@@ -143,6 +143,15 @@ namespace AIToady.Harvester
                 }
 
                 // Check Downloads folder for the file
+                CheckDownloadsFolderForFile(filePath);
+            }
+            catch { }
+        }
+
+        private void CheckDownloadsFolderForFile(string filePath)
+        {
+            try
+            {
                 string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                 string fileName = Path.GetFileName(filePath);
                 string downloadedFile = Path.Combine(downloadsPath, fileName);
@@ -153,13 +162,33 @@ namespace AIToady.Harvester
                 }
                 else
                 {
-                    string normalizedFileName = Path.GetFileNameWithoutExtension(fileName).Replace(" ", ".").ToLower() + Path.GetExtension(fileName).ToLower();
+                    string normalizedFileName = Path.GetFileNameWithoutExtension(fileName).Replace(" ", ".").Replace("-", ".").ToLower() + Path.GetExtension(fileName).ToLower();
                     string normalizedDownloadedFile = Path.Combine(downloadsPath, normalizedFileName);
                     if (File.Exists(normalizedDownloadedFile))
+                    {
                         File.Move(normalizedDownloadedFile, filePath, true);
+                    }
+                    else
+                    {
+                        var recentFiles = Directory.GetFiles(downloadsPath)
+                            .Where(f => File.GetCreationTime(f) > DateTime.Now.AddMinutes(-1))
+                            .OrderByDescending(f => File.GetCreationTime(f));
+
+                        var prefix = Path.GetFileNameWithoutExtension(fileName).Substring(0, Math.Min(3, Path.GetFileNameWithoutExtension(fileName).Length));
+                        var matchingFile = recentFiles.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+
+                        if (matchingFile != null)
+                        {
+                            File.Move(matchingFile, filePath, true);
+                            _viewModel.AddLogEntry($"Found attachment in Downloads folder: {matchingFile} and moved to target location: { filePath}.");
+                        }
+                    }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _viewModel.AddLogEntry($"****** Error checking Downloads folder for file: {ex.Message}");
+            }
         }
 
         private async Task<string> ExtractFlickrAlbum(string albumUrl, string filePath)
