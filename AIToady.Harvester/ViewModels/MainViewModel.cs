@@ -31,8 +31,10 @@ namespace AIToady.Harvester.ViewModels
                         ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                         if (Url.Contains("akfiles", StringComparison.InvariantCultureIgnoreCase))
                             SiteName = "The AK Files";
-                        else
+                        else if(Url.Contains("falfiles", StringComparison.InvariantCultureIgnoreCase))
                             SiteName = "The FAL Files";
+                        else if (Url.Contains("snipershide", StringComparison.InvariantCultureIgnoreCase))
+                            SiteName = "Snipers Hide";
                     }
                 }
 
