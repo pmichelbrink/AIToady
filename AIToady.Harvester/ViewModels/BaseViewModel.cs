@@ -1,6 +1,7 @@
 using AIToady.Harvester.Models;
 using AIToady.Infrastructure;
 using AIToady.Infrastructure.Services;
+using Microsoft.Toolkit.Uwp.Notifications;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -68,7 +69,8 @@ namespace AIToady.Harvester.ViewModels
         public event Func<string, Task<string>> PromptUserInputRequested;
         public event Func<Task> ClearCacheRequested;
         EmailService _emailService;
-
+        protected virtual bool IsBoardPage(string url) { return false; }
+        protected virtual async Task LoadForumLinksFromBoard() { }
         protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
         protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
         protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
@@ -327,7 +329,7 @@ namespace AIToady.Harvester.ViewModels
             }
         }
 
-        private async Task StartNextForum()
+        private async Task StartNextForum(bool skipCategoryPrompt = true)
         {
             var nextForum = _scheduledForums.First();
             _scheduledForums.RemoveAt(0);
@@ -335,7 +337,9 @@ namespace AIToady.Harvester.ViewModels
             await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
             if (Utilities.IsValidForumUrl(nextForum))
                 Url = nextForum;
-            ExecuteGo(true);
+
+            await ExecuteGo(skipCategoryPrompt);
+
             await Task.Delay(3000);
             _isHarvesting = false;
             ExecuteStartHarvesting();
@@ -372,8 +376,6 @@ namespace AIToady.Harvester.ViewModels
                 HarvestingButtonText = "Start Harvesting";
                 return false;
             }
-
-            _emailService = new EmailService(EmailAccount, EmailPassword);
 
             _isHarvesting = true;
             HarvestingButtonText = "Stop Harvesting";
@@ -524,31 +526,43 @@ namespace AIToady.Harvester.ViewModels
         }
         protected virtual async Task ExtractForumName(bool skipCategoryPrompt = false) { }
 
-        public virtual async void ExecuteGo(bool skipCategoryPrompt = false)
+        public virtual async Task ExecuteGo(bool skipCategoryPrompt = false)
         {
-            if (!string.IsNullOrEmpty(Url))
+            if (string.IsNullOrEmpty(Url))
+                return;
+
+            _emailService = new EmailService(EmailAccount, EmailPassword);
+
+            string url = Url.Trim();
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
             {
-                string url = Url.Trim();
-                if (!url.StartsWith("http://") && !url.StartsWith("https://"))
-                {
-                    url = "https://" + url;
-                }
+                url = "https://" + url;
+            }
 
-                Uri.TryCreate(url, UriKind.Absolute, out var uri);
+            Uri.TryCreate(url, UriKind.Absolute, out var uri);
 
-                if ((uri.Host.Contains("theakforum") || uri.Host.Contains("gunboards")) && GetType() != typeof(TheAKForumViewModel))
-                {
-                    ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.TheAKForum);
-                    return;
-                }
-                else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
-                {
-                    ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
-                    return;
-                }
+            if ((uri.Host.Contains("theakforum") || uri.Host.Contains("gunboards")) && GetType() != typeof(TheAKForumViewModel))
+            {
+                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
+            {
+                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
+                return;
+            }
 
-                NavigateRequested?.Invoke(url);
-                await Task.Delay(2000);
+            NavigateRequested?.Invoke(url);
+            await Task.Delay(2000);
+
+            if (IsBoardPage(url))
+            {
+                await LoadForumLinksFromBoard();
+
+                await StartNextForum(false);
+            }
+            else
+            {
                 await ExtractForumName(skipCategoryPrompt);
             }
         }
