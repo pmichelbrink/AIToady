@@ -61,6 +61,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _emailPassword = "";
         protected bool _pausedForConnection = false;
         protected string _category = "";
+        protected DateTime _lastHarvestPageCall = DateTime.Now;
         public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
         public event Action<string> NavigateRequested;
@@ -435,6 +436,7 @@ namespace AIToady.Harvester.ViewModels
             bool hasNextPage = true;
             while (_isHarvesting && hasNextPage)
             {
+                _lastHarvestPageCall = DateTime.Now;
                 List<ForumMessage> pageMessages = await HarvestPage();
 
                 if (pageMessages.Count == 0)
@@ -1005,6 +1007,14 @@ namespace AIToady.Harvester.ViewModels
 
         public void RunTimerOperations()
         {
+            if (_isHarvesting && (DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
+            {
+                _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
+                    $"Harvesting Stalled on {Environment.MachineName}", 
+                    $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}");
+                _lastHarvestPageCall = DateTime.Now;
+            }
+
             if (_url.Contains("gunboards", StringComparison.InvariantCultureIgnoreCase))
                 ClearCacheRequested?.Invoke();
 
