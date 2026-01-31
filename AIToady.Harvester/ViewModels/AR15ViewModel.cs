@@ -16,6 +16,8 @@ namespace AIToady.Harvester.ViewModels
 
         protected override bool IsBoardPage(string url)
         {
+            if (url.Contains("page=", StringComparison.OrdinalIgnoreCase))
+                return false;
             if (url.Contains("/board.html", StringComparison.OrdinalIgnoreCase))
                 return true;
             if (url.Contains("/forum.html", StringComparison.OrdinalIgnoreCase))
