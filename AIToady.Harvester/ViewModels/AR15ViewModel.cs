@@ -13,6 +13,54 @@ namespace AIToady.Harvester.ViewModels
         {
             
         }
+
+        protected override bool IsBoardPage(string url)
+        {
+            if (url.Contains("/board.html", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (url.Contains("/forum.html", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (url.TrimEnd('/').Split('/').LastOrDefault()?.All(char.IsDigit) == true)
+                return false;
+            else
+                return true;
+        }
+
+        protected override async Task LoadForumLinksFromBoard()
+        {
+            try
+            {
+                string script = @"
+                    let forumLinks = [];
+                    document.querySelectorAll('a[href*=""/forums/""]').forEach(a => {
+                        let href = a.getAttribute('href');
+                        if (href && (href.match(/\/forums\/[^\/]+\/[^\/]+\/\d+\/$/) || href.includes('/archive/forum.html'))) {
+                            forumLinks.push(a.href);
+                        }
+                    });
+                    JSON.stringify([...new Set(forumLinks)]);
+                ";
+
+                string result = await InvokeExecuteScriptRequested(script);
+                result = JsonSerializer.Deserialize<string>(result);
+                var links = JsonSerializer.Deserialize<string[]>(result);
+
+                foreach (var link in links)
+                {
+                    if (!_scheduledForums.Contains(link))
+                    {
+                        _scheduledForums.Add(link);
+                    }
+                }
+
+                SaveSettings();
+                AddLogEntry($"Added {links.Length} forums to schedule");
+            }
+            catch (Exception ex)
+            {
+                AddLogEntry($"Error loading forum links from board: {ex.Message}");
+            }
+        }
         protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
         {
             try
