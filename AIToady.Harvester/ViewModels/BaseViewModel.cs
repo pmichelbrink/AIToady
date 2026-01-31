@@ -732,6 +732,11 @@ namespace AIToady.Harvester.ViewModels
                             System.IO.Directory.CreateDirectory(imagesFolder);
 
                         string imagePath = Path.Combine(imagesFolder, fileName);
+                        if (File.Exists(imagePath))
+                        {
+                            AddLogEntry(fileName + " already exists, skipping download");
+                            continue;
+                        }
 
                         string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
 

@@ -57,15 +57,26 @@ namespace AIToady.Harvester.ViewModels
                         return 'not_found';
                     })()
                 ";
-                string result = await InvokeExecuteScriptRequested(script);
                 
-                if (string.IsNullOrEmpty(result))
+                int[] delays = { 5000, 10000, 20000 };
+                
+                for (int i = 0; i < delays.Length; i++)
                 {
-                    return false;
+                    string result = JsonSerializer.Deserialize<string>(await InvokeExecuteScriptRequested(script));
+                    
+                    if (result == "clicked")
+                        return true;
+                    
+                    if (i < delays.Length - 1)
+                    {
+                        AddLogEntry($"CheckIfNextPageExists - Next button not found, refreshing page and waiting {delays[i] / 1000} seconds...");
+                        await InvokeExecuteScriptRequested("location.reload();");
+                        await Task.Delay(delays[i]);
+                    }
                 }
                 
-                result = JsonSerializer.Deserialize<string>(result);
-                return result == "clicked";
+                AddLogEntry("CheckIfNextPageExists - Next button not found after all retries");
+                return false;
             }
             catch (Exception ex)
             {
@@ -80,7 +91,7 @@ namespace AIToady.Harvester.ViewModels
             string extractScript = $@"
                 let messages = [];
                 document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
-                    let userElement = messageDiv.querySelector('.message-name a');
+                    let userElement = messageDiv.querySelector('.message-name a') || messageDiv.querySelector('.message-name .username');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
                     let timeElement = messageDiv.querySelector('.u-dt');
                     let images = [];
@@ -96,7 +107,7 @@ namespace AIToady.Harvester.ViewModels
                         
                         // Extract all attachment files
                         let attachmentUrls = new Set();
-                        messageDiv.querySelectorAll('.attachmentList .attachment a').forEach(element => {{
+                        messageDiv.querySelectorAll('.attachmentList .attachment a, .attachmentList .file-preview').forEach(element => {{
                             let attachmentUrl = element.href;
                             if (attachmentUrl && attachmentUrl.includes('/attachments/')) {{
                                 attachmentUrls.add(attachmentUrl);
