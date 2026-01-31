@@ -305,8 +305,8 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
-                    System.Media.SystemSounds.Beep.Play();
+                    //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
+                    //System.Media.SystemSounds.Beep.Play();
                 }
 
                 if (_stopAfterCurrentPage)
@@ -335,7 +335,7 @@ namespace AIToady.Harvester.ViewModels
             var nextForum = _scheduledForums.First();
             _scheduledForums.RemoveAt(0);
             AddLogEntry($"Loading next scheduled forum: {nextForum}");
-            await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
+            //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
             if (Utilities.IsValidForumUrl(nextForum))
                 Url = nextForum;
 
@@ -1009,9 +1009,9 @@ namespace AIToady.Harvester.ViewModels
         {
             if (_isHarvesting && (DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
-                _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
+                Task.Run(async () => await _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
                     $"Harvesting Stalled on {Environment.MachineName}", 
-                    $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}");
+                    $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}"));
                 _lastHarvestPageCall = DateTime.Now;
             }
 
