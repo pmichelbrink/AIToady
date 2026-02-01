@@ -176,7 +176,7 @@ namespace AIToady.Harvester
                             .Where(f => File.GetCreationTime(f) > DateTime.Now.AddMinutes(-1))
                             .OrderByDescending(f => File.GetCreationTime(f));
 
-                        var prefix = Path.GetFileNameWithoutExtension(fileName).Substring(0, Math.Min(3, Path.GetFileNameWithoutExtension(fileName).Length));
+                        var prefix = Path.GetFileNameWithoutExtension(fileName).Substring(0, Math.Min(2, Path.GetFileNameWithoutExtension(fileName).Length));
                         var matchingFile = recentFiles.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
                         if (matchingFile != null)
