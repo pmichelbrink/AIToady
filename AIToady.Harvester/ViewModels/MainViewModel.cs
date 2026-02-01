@@ -58,7 +58,7 @@ namespace AIToady.Harvester.ViewModels
                     })()
                 ";
                 
-                int[] delays = { 5000, 10000, 20000 };
+                int[] delays = { 2000, 5000 };
                 
                 for (int i = 0; i < delays.Length; i++)
                 {
@@ -66,13 +66,10 @@ namespace AIToady.Harvester.ViewModels
                     
                     if (result == "clicked")
                         return true;
-                    
-                    if (i < delays.Length - 1)
-                    {
-                        AddLogEntry($"CheckIfNextPageExists - Next button not found, refreshing page and waiting {delays[i] / 1000} seconds...");
-                        await InvokeExecuteScriptRequested("location.reload();");
-                        await Task.Delay(delays[i]);
-                    }
+
+                    AddLogEntry($"CheckIfNextPageExists - Next button not found, refreshing page and waiting {delays[i] / 1000} seconds...");
+                    await InvokeExecuteScriptRequested("location.reload();");
+                    await Task.Delay(delays[i]);
                 }
                 
                 AddLogEntry("CheckIfNextPageExists - Next button not found after all retries");
