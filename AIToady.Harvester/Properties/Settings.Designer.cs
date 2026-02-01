@@ -299,5 +299,17 @@ namespace AIToady.Harvester.Properties {
                 this["ScheduleForums"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HarvestSince {
+            get {
+                return ((string)(this["HarvestSince"]));
+            }
+            set {
+                this["HarvestSince"] = value;
+            }
+        }
     }
 }

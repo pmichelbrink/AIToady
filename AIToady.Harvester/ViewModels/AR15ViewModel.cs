@@ -129,36 +129,65 @@ namespace AIToady.Harvester.ViewModels
                 if (!Url.Contains("/archive/"))
                 {
                     script = @"
-                        let linkSet = new Set();
+                        let threads = [];
                         let anchors = document.querySelectorAll('a.tw-align-middle.tw-text-\\[0\\.9rem\\]');
                         anchors.forEach(a => {
                             if (a.href && a.href.includes('/forums/')) {
-                                linkSet.add(a.href);
+                                let threadUrl = a.href;
+                                let lastPostDate = null;
+                                let container = a.closest('div.tw-relative.tw-rounded');
+                                if (container) {
+                                    let divs = container.querySelectorAll('div');
+                                    divs.forEach(div => {
+                                        if (div.textContent.includes('Last Post:')) {
+                                            let span = div.querySelector('span.tw-font-bold');
+                                            if (span) {
+                                                lastPostDate = span.textContent.trim();
+                                            }
+                                        }
+                                    });
+                                }
+                                threads.push({ url: threadUrl, lastPostDate: lastPostDate });
                             }
                         });
-                        JSON.stringify(Array.from(linkSet));
+                        JSON.stringify(threads);
                     ";
                 }
                 else
                 {
                     script = @"
-                    let linkSet = new Set();
+                    let threads = [];
                     let uls = document.querySelectorAll('ul');
                     uls.forEach(ul => {
                         let anchors = ul.querySelectorAll('li a');
                         anchors.forEach(a => {
-                            if (a.href && a.href.includes('/forums/')) linkSet.add(a.href);
+                            if (a.href && a.href.includes('/forums/')) {
+                                let threadUrl = a.href;
+                                let lastPostDate = null;
+                                let li = a.closest('li');
+                                if (li) {
+                                    let italic = li.querySelector('i');
+                                    if (italic) {
+                                        let text = italic.textContent.trim();
+                                        let match = text.match(/\((.*?)\s+-/);
+                                        if (match) {
+                                            lastPostDate = match[1];
+                                        }
+                                    }
+                                }
+                                threads.push({ url: threadUrl, lastPostDate: lastPostDate });
+                            }
                         });
                     });
-                    JSON.stringify(Array.from(linkSet));
+                    JSON.stringify(threads);
                 ";
                 }
 
                 string result = await InvokeExecuteScriptRequested(script);
                 result = JsonSerializer.Deserialize<string>(result);
-                var links = JsonSerializer.Deserialize<string[]>(result);
-                _threadLinks.Clear();
-                _threadLinks.AddRange(links);
+                var threads = JsonSerializer.Deserialize<ThreadInfo[]>(result);
+                _threadInfos.Clear();
+                _threadInfos.AddRange(threads);
             }
             catch (Exception ex)
             {

@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.Toolkit.Uwp.Notifications;
 namespace AIToady.Harvester.ViewModels
 {
     public class BaseViewModel : INotifyPropertyChanged
@@ -36,7 +35,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _hoursOfOperationEnabled = true;
         protected bool _darkMode = true;
         protected ObservableCollection<string> _scheduledForums = new ObservableCollection<string>();
-        protected List<string> _threadLinks = new List<string>();
+        protected List<ThreadInfo> _threadInfos = new List<ThreadInfo>();
         protected HashSet<string> _badDomains = new HashSet<string>
         {
             "tinypic.com", "imgsafe.org", "postimg.org", "carbinecreations.com",
@@ -61,6 +60,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _emailPassword = "";
         protected bool _pausedForConnection = false;
         protected string _category = "";
+        protected DateTime? _harvestSince = null;
         protected DateTime _lastHarvestPageCall = DateTime.Now;
         public event Func<string, string, Task<string>> ExtractImageRequested;
         public event Func<string, string, Task> ExtractAttachmentRequested;
@@ -206,7 +206,7 @@ namespace AIToady.Harvester.ViewModels
 
         public ObservableCollection<string> ScheduledForums => _scheduledForums;
 
-        public List<string> ThreadLinks => _threadLinks;
+        public List<ThreadInfo> ThreadInfos => _threadInfos;
 
         public string EmailAccount
         {
@@ -224,6 +224,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _category;
             set => SetProperty(ref _category, value);
+        }
+
+        public DateTime? HarvestSince
+        {
+            get => _harvestSince;
+            set => SetProperty(ref _harvestSince, value);
         }
 
         public ICommand GoCommand { get; protected set; }
@@ -273,12 +279,19 @@ namespace AIToady.Harvester.ViewModels
                     break;
                 }
 
-                for (int i = ThreadsToSkip; i < _threadLinks.Count; i++)
+                for (int i = ThreadsToSkip; i < _threadInfos.Count; i++)
                 {
                     await CheckInternetConnection();
 
-                    AddLogEntry(_threadLinks[i]);
-                    var thread = await HarvestThread(_threadLinks[i]);
+                    var threadInfo = _threadInfos[i];
+                    if (HarvestSince.HasValue && threadInfo.LastPostDate.HasValue && threadInfo.LastPostDate.Value < HarvestSince.Value)
+                    {
+                        AddLogEntry($"Skipping thread (last post {threadInfo.LastPostDate.Value:yyyy-MM-dd} before {HarvestSince.Value:yyyy-MM-dd}): {threadInfo.Url}");
+                        continue;
+                    }
+
+                    AddLogEntry(threadInfo.Url);
+                    var thread = await HarvestThread(threadInfo.Url);
                     await WriteThreadInfo(thread);
 
                     if (!_isHarvesting)
@@ -286,6 +299,13 @@ namespace AIToady.Harvester.ViewModels
                         InvokeNavigateRequested(Url);
                         return;
                     }
+                }
+                
+                if (HarvestSince.HasValue && _threadInfos.All(t => t.LastPostDate.HasValue && t.LastPostDate.Value < HarvestSince.Value))
+                {
+                    AddLogEntry($"All threads on this page are before {HarvestSince.Value:yyyy-MM-dd}, stopping harvest");
+                    hasNextForumPage = false;
+                    break;
                 }
                 //Only skip threads on the first page (like when harvesting was stopped mid-page)
                 ThreadsToSkip = 0;
@@ -592,22 +612,36 @@ namespace AIToady.Harvester.ViewModels
                 if (!string.IsNullOrEmpty(className))
                 {
                     string script = $@"
-                        let linkSet = new Set();
+                        let threads = [];
                         let divs = document.querySelectorAll('.{className.TrimStart('.')}');
                         divs.forEach(div => {{
                             let anchors = div.querySelectorAll('a');
+                            let threadUrl = null;
                             anchors.forEach(a => {{
-                                if (a.href && a.href.includes('/threads/')) linkSet.add(a.href);
+                                if (a.href && a.href.includes('/threads/') && !threadUrl) {{
+                                    threadUrl = a.href;
+                                }}
                             }});
+                            if (threadUrl) {{
+                                let latestDate = null;
+                                let structItem = div.closest('.structItem');
+                                if (structItem) {{
+                                    let timeElement = structItem.querySelector('.structItem-latestDate');
+                                    if (timeElement) {{
+                                        latestDate = timeElement.getAttribute('datetime');
+                                    }}
+                                }}
+                                threads.push({{ url: threadUrl, lastPostDate: latestDate }});
+                            }}
                         }});
-                        JSON.stringify(Array.from(linkSet));
+                        JSON.stringify(threads);
                     ";
 
                     string result = await ExecuteScriptRequested?.Invoke(script);
                     result = JsonSerializer.Deserialize<string>(result);
-                    var links = JsonSerializer.Deserialize<string[]>(result);
-                    _threadLinks.Clear();
-                    _threadLinks.AddRange(links);
+                    var threads = JsonSerializer.Deserialize<ThreadInfo[]>(result);
+                    _threadInfos.Clear();
+                    _threadInfos.AddRange(threads);
                 }
             }
             catch (Exception ex)
@@ -858,7 +892,7 @@ namespace AIToady.Harvester.ViewModels
             LoadSettings();
             GoCommand = new RelayCommand(() => ExecuteGo());
             NextCommand = new RelayCommand(ExecuteNext);
-            StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadLinks.Count > 0);
+            StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadInfos.Count > 0);
             ScheduleCommand = new RelayCommand(ExecuteSchedule);
 
             InitializeTimer();
@@ -924,6 +958,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.DarkMode = DarkMode;
+            Properties.Settings.Default.HarvestSince = HarvestSince?.ToString("o") ?? "";
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
             Properties.Settings.Default.Save();
         }
@@ -979,6 +1014,10 @@ namespace AIToady.Harvester.ViewModels
             Category = Properties.Settings.Default.Category ?? "";
             DarkMode = Properties.Settings.Default.DarkMode;
             
+            var harvestSinceStr = Properties.Settings.Default.HarvestSince ?? "";
+            if (!string.IsNullOrEmpty(harvestSinceStr) && DateTime.TryParse(harvestSinceStr, out var harvestSince))
+                HarvestSince = harvestSince;
+            
             var forums = Properties.Settings.Default.ScheduleForums ?? "";
             if (!string.IsNullOrEmpty(forums))
             {
@@ -1023,7 +1062,7 @@ namespace AIToady.Harvester.ViewModels
                 StopAfterCurrentPage = true;
                 HarvestingButtonText = "Sleeping";
             }
-            else if (!_isHarvesting && IsWithinOperatingHours() && HarvestingButtonText == "Sleeping" && _threadLinks.Count > 0)
+            else if (!_isHarvesting && IsWithinOperatingHours() && HarvestingButtonText == "Sleeping" && _threadInfos.Count > 0)
             {
                 HarvestingButtonText = "Start Harvesting";
                 StopAfterCurrentPage = false;

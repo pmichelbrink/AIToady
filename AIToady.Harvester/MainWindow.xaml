@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:AIToady.Harvester"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="AI Toady Harvester" Height="450" Width="1000"
+        Title="AI Toady Harvester" Height="1000" Width="1600"
         UseLayoutRounding="True">
     <Grid>
         <Grid.RowDefinitions>
@@ -285,7 +285,39 @@
                     </Grid>
                 </Grid>
             </GroupBox>
-            <Button Grid.Column="6"
+            <GroupBox Grid.Column="6"
+                      Header="Harvest Since"
+                      BorderThickness=".5"
+                      Margin="5,0"
+                      Height="58">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="HarvestSinceTextBox"
+                             Width="80"
+                             Height="25"
+                             VerticalContentAlignment="Center"
+                             Text="{Binding HarvestSince, StringFormat='{}{0:yyyy-MM-dd}'}"
+                             IsReadOnly="True"
+                             Margin="5,0,2,0" />
+                    <Button Grid.Column="1"
+                            Content="📅"
+                            Width="25"
+                            Height="25"
+                            Click="HarvestSinceDatePickerButton_Click"
+                            Margin="0,0,2,0" />
+                    <Button Grid.Column="2"
+                            Content="✖"
+                            Width="25"
+                            Height="25"
+                            Click="ClearHarvestSinceButton_Click"
+                            Margin="0,0,5,0" />
+                </Grid>
+            </GroupBox>
+            <Button Grid.Column="7"
                     Padding="5,0"
                     Content="Schedule Forums"
                     Height="25"

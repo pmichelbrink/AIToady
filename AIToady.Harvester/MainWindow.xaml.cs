@@ -538,6 +538,36 @@ namespace AIToady.Harvester
             ShowTimePicker(EndTimeTextBox, _viewModel.EndTime, time => _viewModel.EndTime = time);
         }
 
+        private void HarvestSinceDatePickerButton_Click(object sender, RoutedEventArgs e)
+        {
+            var calendar = new Calendar
+            {
+                SelectedDate = _viewModel.HarvestSince,
+                DisplayDate = _viewModel.HarvestSince ?? DateTime.Now
+            };
+
+            var popup = new System.Windows.Controls.Primitives.Popup
+            {
+                PlacementTarget = HarvestSinceTextBox,
+                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+                StaysOpen = false,
+                Child = calendar
+            };
+
+            calendar.SelectedDatesChanged += (s, args) =>
+            {
+                _viewModel.HarvestSince = calendar.SelectedDate;
+                popup.IsOpen = false;
+            };
+
+            popup.IsOpen = true;
+        }
+
+        private void ClearHarvestSinceButton_Click(object sender, RoutedEventArgs e)
+        {
+            _viewModel.HarvestSince = null;
+        }
+
         private void ShowTimePicker(TextBox textBox, string currentTime, Action<string> updateTime)
         {
             var popup = new System.Windows.Controls.Primitives.Popup
