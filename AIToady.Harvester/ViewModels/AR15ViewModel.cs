@@ -234,7 +234,7 @@ namespace AIToady.Harvester.ViewModels
             // If there are fewer than 50 messages on the current page, assume it's the last/only page
             if (currentPageMessageCount < 50)
             {
-                AddLogEntry("Fewer than 50 messages on current page, assuming no next page");
+                AddLogEntry($"Only {currentPageMessageCount} messages on current page, assuming no next page");
                 return false;
             }
 
