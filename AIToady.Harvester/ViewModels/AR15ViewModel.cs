@@ -32,16 +32,30 @@ namespace AIToady.Harvester.ViewModels
         {
             try
             {
-                string script = @"
-                    let forumLinks = [];
-                    document.querySelectorAll('a[href*=""/forums/""]').forEach(a => {
-                        let href = a.getAttribute('href');
-                        if (href && (href.match(/\/forums\/[^\/]+\/[^\/]+\/\d+\/$/) || href.includes('/archive/forum.html'))) {
+                string script;
+                if (Url.Contains("/archive/"))
+                {
+                    script = @"
+                        let forumLinks = [];
+                        document.querySelectorAll('ul li a[href*=""/archive/forum.html""]').forEach(a => {
                             forumLinks.push(a.href);
-                        }
-                    });
-                    JSON.stringify([...new Set(forumLinks)]);
-                ";
+                        });
+                        JSON.stringify([...new Set(forumLinks)]);
+                    ";
+                }
+                else
+                {
+                    script = @"
+                        let forumLinks = [];
+                        document.querySelectorAll('a[href*=""/forums/""]').forEach(a => {
+                            let href = a.getAttribute('href');
+                            if (href && (href.match(/\/forums\/[^\/]+\/[^\/]+\/\d+\/$/) || href.includes('/archive/forum.html'))) {
+                                forumLinks.push(a.href);
+                            }
+                        });
+                        JSON.stringify([...new Set(forumLinks)]);
+                    ";
+                }
 
                 string result = await InvokeExecuteScriptRequested(script);
                 result = JsonSerializer.Deserialize<string>(result);
