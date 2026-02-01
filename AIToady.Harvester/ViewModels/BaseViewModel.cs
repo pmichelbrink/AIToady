@@ -1189,6 +1189,15 @@ namespace AIToady.Harvester.ViewModels
             }
 
             fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
+
+            // Generate unique name if filename is just "image"
+            var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            if (nameWithoutExt.Equals("image", StringComparison.OrdinalIgnoreCase))
+            {
+                var ext = Path.GetExtension(fileName);
+                fileName = $"image_{Guid.NewGuid().ToString("N")[..8]}{ext}";
+            }
+
             return fileName;
         }
 
