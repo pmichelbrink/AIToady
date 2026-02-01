@@ -72,7 +72,7 @@ namespace AIToady.Harvester.ViewModels
         EmailService _emailService;
         protected virtual bool IsBoardPage(string url) { return false; }
         protected virtual async Task LoadForumLinksFromBoard() { }
-        protected virtual async Task<bool> CheckIfNextPageExists() { return false; }
+        protected virtual async Task<bool> CheckIfNextPageExists(int count) { return false; }
         protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
         protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
         protected async Task<string> InvokeExecuteScriptRequested(string script) => await ExecuteScriptRequested?.Invoke(script);
@@ -468,7 +468,7 @@ namespace AIToady.Harvester.ViewModels
 
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
-                bool nextPageExists = await CheckIfNextPageExists();
+                bool nextPageExists = await CheckIfNextPageExists(pageMessages.Count);
 
                 if (nextPageExists)
                 {
@@ -544,7 +544,7 @@ namespace AIToady.Harvester.ViewModels
 
         protected virtual async Task<bool> LoadNextForumPage()
         {
-            return await CheckIfNextPageExists();
+            return await CheckIfNextPageExists(999);
         }
         protected virtual async Task ExtractForumName(bool skipCategoryPrompt = false) { }
 
