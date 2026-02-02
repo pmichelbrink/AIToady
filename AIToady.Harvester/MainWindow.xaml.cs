@@ -31,7 +31,7 @@ namespace AIToady.Harvester
             InitializeComponent();
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
-            
+
             LoadWindowSettings();
 
             _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
@@ -41,23 +41,24 @@ namespace AIToady.Harvester
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             _viewModel.PromptUserInputRequested += PromptUserForInput;
             _viewModel.ClearCacheRequested += async () => await WebView.CoreWebView2?.Profile.ClearBrowsingDataAsync();
+            _viewModel.SetDownloadFolderRequested += SetDownloadFolder;
             _viewModel.PropertyChanged += (s, e) => { if (e.PropertyName == "DarkMode") ApplyTheme(); };
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
             WebView.CoreWebView2InitializationCompleted += async (s, e) => {
                 //await WebView.CoreWebView2.Profile.ClearBrowsingDataAsync();
-                
+
                 WebView.CoreWebView2.ProcessFailed += (sender, args) => {
                     Dispatcher.Invoke(() => WebView.Reload());
                 };
-                
+
                 WebView.CoreWebView2.ScriptDialogOpening += async (sender, args) => {
                     await Task.Delay(5000);
                     _viewModel.AddLogEntry($"Clicking OK to this alert message: {args.Message}.");
                     args.Accept();
                 };
-                
+
                 WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
                     if (_isCapturingElement) {
                         string result = args.TryGetWebMessageAsString();
@@ -71,7 +72,7 @@ namespace AIToady.Harvester
                     }
                 };
             };
-            
+
             Closing += MainWindow_Closing;
         }
 
@@ -81,10 +82,10 @@ namespace AIToady.Harvester
             Height = Properties.Settings.Default.WindowHeight;
             Left = Properties.Settings.Default.WindowLeft;
             Top = Properties.Settings.Default.WindowTop;
-            
+
             // Set password box value after loading settings
             EmailPasswordBox.Password = _viewModel.EmailPassword;
-            
+
             // Apply initial theme
             Loaded += (s, e) => ApplyTheme();
         }
@@ -100,13 +101,13 @@ namespace AIToady.Harvester
                     return;
                 }
             }
-            
+
             Properties.Settings.Default.WindowWidth = Width;
             Properties.Settings.Default.WindowHeight = Height;
             Properties.Settings.Default.WindowLeft = Left;
             Properties.Settings.Default.WindowTop = Top;
             Properties.Settings.Default.Save();
-            
+
             _viewModel.SaveSettings();
             _viewModel.Dispose();
         }
@@ -142,8 +143,7 @@ namespace AIToady.Harvester
                     await File.WriteAllBytesAsync(filePath, attachmentBytes);
                 }
 
-                // Check Downloads folder for the file
-                await CheckDownloadsFolderForFile(filePath);
+                await ConsolidateDuplicateDownloads(filePath);
             }
             catch { }
         }
@@ -152,7 +152,7 @@ namespace AIToady.Harvester
         {
             try
             {
-                await Task.Delay(5000);
+                    await Task.Delay(5000);
 
                 string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                 string fileName = Path.GetFileName(filePath);
@@ -182,7 +182,7 @@ namespace AIToady.Harvester
                         if (matchingFile != null)
                         {
                             File.Move(matchingFile, filePath, true);
-                            _viewModel.AddLogEntry($"Found attachment in Downloads folder: {matchingFile} and moved to target location: { filePath}.");
+                            _viewModel.AddLogEntry($"Found attachment in Downloads folder: {matchingFile} and moved to target location: {filePath}.");
                         }
                         else if (recentFiles.Any())
                         {
@@ -194,6 +194,43 @@ namespace AIToady.Harvester
             catch (Exception ex)
             {
                 _viewModel.AddLogEntry($"****** Error checking Downloads folder for file: {ex.Message}");
+            }
+        }
+
+        private async Task ConsolidateDuplicateDownloads(string filePath)
+        {
+            if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || 
+                !File.Exists(filePath) || 
+                new FileInfo(filePath).Length > 10240)
+                return;
+                
+            await Task.Delay(5000);
+            
+            var files = Directory.GetFiles(WebView.CoreWebView2.Profile.DefaultDownloadFolderPath)
+                .Select(f => new { Path = f, Info = new FileInfo(f) })
+                .OrderBy(f => f.Info.CreationTime)
+                .ToList();
+
+            for (int i = 0; i < files.Count - 1; i++)
+            {
+                for (int j = i + 1; j < files.Count; j++)
+                {
+                    var file1 = files[i];
+                    var file2 = files[j];
+
+                    if ((file2.Info.CreationTime - file1.Info.CreationTime).TotalSeconds <= 5 &&
+                        file1.Info.Extension.Equals(file2.Info.Extension, StringComparison.OrdinalIgnoreCase) &&
+                        char.ToLower(Path.GetFileNameWithoutExtension(file1.Path)[0]) == char.ToLower(Path.GetFileNameWithoutExtension(file2.Path)[0]))
+                    {
+                        var smaller = file1.Info.Length < file2.Info.Length ? file1 : file2;
+                        var larger = file1.Info.Length >= file2.Info.Length ? file1 : file2;
+
+                        File.Copy(larger.Path, smaller.Path, true);
+                        File.Delete(larger.Path);
+                        _viewModel.AddLogEntry($"Consolidated duplicate downloads: kept {Path.GetFileName(smaller.Path)}, removed {Path.GetFileName(larger.Path)}");
+                        return;
+                    }
+                }
             }
         }
 
@@ -663,6 +700,7 @@ namespace AIToady.Harvester
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
             _viewModel.PromptUserInputRequested += PromptUserForInput;
             _viewModel.ClearCacheRequested += async () => await WebView.CoreWebView2?.Profile.ClearBrowsingDataAsync();
+            _viewModel.SetDownloadFolderRequested += SetDownloadFolder;
             
             _viewModel.ExecuteGo();
         }
@@ -747,6 +785,15 @@ namespace AIToady.Harvester
             foreach (var button in FindVisualChildren<Button>(LogListView))
             {
                 button.Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom(fg);
+            }
+        }
+
+        private void SetDownloadFolder(string folder)
+        {
+            if (WebView.CoreWebView2 != null && !string.IsNullOrEmpty(folder))
+            {
+                Directory.CreateDirectory(folder);
+                WebView.CoreWebView2.Profile.DefaultDownloadFolderPath = folder;
             }
         }
         

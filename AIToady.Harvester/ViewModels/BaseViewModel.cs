@@ -70,6 +70,7 @@ namespace AIToady.Harvester.ViewModels
         public event Action<ViewModelType> ViewModelSwitchRequested;
         public event Func<string, Task<string>> PromptUserInputRequested;
         public event Func<Task> ClearCacheRequested;
+        public event Action<string> SetDownloadFolderRequested;
         EmailService _emailService;
         protected virtual bool IsBoardPage(string url) { return false; }
         protected virtual async Task LoadForumLinksFromBoard() { }
@@ -832,6 +833,9 @@ namespace AIToady.Harvester.ViewModels
                     }
                 }
                 message.Images = imageNames;
+
+                if (message.Attachments.Any())
+                    SetDownloadFolderRequested?.Invoke(attachmentsFolder);
 
                 // Process attachments
                 var attachmentNames = new List<string>();
