@@ -46,7 +46,7 @@ namespace AIToady.Harvester.ViewModels
         protected async override Task<bool> CheckIfNextPageExists(int currentPageMessageCount)
         {
             // If there are fewer than 25 messages on the current page, assume it's the last/only page
-            if (currentPageMessageCount < 25)
+            if (currentPageMessageCount < 50)
             {
                 AddLogEntry($"Only {currentPageMessageCount} messages on current page, assuming no next page");
                 return false;

@@ -311,5 +311,17 @@ namespace AIToady.Harvester.Properties {
                 this["HarvestSince"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("25")]
+        public int MessagesPerPage {
+            get {
+                return ((int)(this["MessagesPerPage"]));
+            }
+            set {
+                this["MessagesPerPage"] = value;
+            }
+        }
     }
 }

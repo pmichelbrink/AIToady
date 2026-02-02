@@ -20,6 +20,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
+        protected int _messagesPerPage = 25;
         protected string _url = string.Empty;
         protected string _nextElement = ".pageNav-jump--next";
         protected string _threadElement = "structItem-title";
@@ -136,6 +137,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _threadsToSkip;
             set => SetProperty(ref _threadsToSkip, value);
+        }
+
+        public int MessagesPerPage
+        {
+            get => _messagesPerPage;
+            set => SetProperty(ref _messagesPerPage, value < 1 ? 1 : value);
         }
 
         public int PageLoadDelay
@@ -958,6 +965,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.DarkMode = DarkMode;
+            Properties.Settings.Default.MessagesPerPage = MessagesPerPage;
             Properties.Settings.Default.HarvestSince = HarvestSince?.ToString("o") ?? "";
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
             Properties.Settings.Default.Save();
@@ -1013,6 +1021,7 @@ namespace AIToady.Harvester.ViewModels
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
             Category = Properties.Settings.Default.Category ?? "";
             DarkMode = Properties.Settings.Default.DarkMode;
+            MessagesPerPage = Properties.Settings.Default.MessagesPerPage == 0 ? 25 : Properties.Settings.Default.MessagesPerPage;
             
             var harvestSinceStr = Properties.Settings.Default.HarvestSince ?? "";
             if (!string.IsNullOrEmpty(harvestSinceStr) && DateTime.TryParse(harvestSinceStr, out var harvestSince))
@@ -1294,6 +1303,7 @@ namespace AIToady.Harvester.ViewModels
             newViewModel._endTime = _endTime;
             newViewModel._skipExistingThreads = _skipExistingThreads;
             newViewModel._hoursOfOperationEnabled = _hoursOfOperationEnabled;
+            newViewModel._messagesPerPage = _messagesPerPage;
             newViewModel._badDomains = new HashSet<string>(_badDomains);
             newViewModel._category = _category;
             return newViewModel;

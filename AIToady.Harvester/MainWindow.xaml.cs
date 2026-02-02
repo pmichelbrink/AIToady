@@ -512,6 +512,11 @@ namespace AIToady.Harvester
             e.Handled = !char.IsDigit(e.Text, 0);
         }
 
+        private void MessagesPerPageTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !char.IsDigit(e.Text, 0) || (sender as TextBox)?.Text == "0";
+        }
+
         private void BrowseButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
