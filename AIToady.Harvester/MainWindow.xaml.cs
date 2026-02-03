@@ -121,7 +121,12 @@ namespace AIToady.Harvester
                 await Task.Delay(3000);
 
                 if (File.Exists(filePath))
+                {
+                    if (!string.IsNullOrEmpty(currentUrl))
+                        await WaitForNavigation(currentUrl);
+
                     return;
+                }
 
                 string script = @"
                     var img = document.querySelector('img');
