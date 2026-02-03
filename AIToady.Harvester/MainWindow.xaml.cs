@@ -120,6 +120,9 @@ namespace AIToady.Harvester
                 WebView.Source = new Uri(attachmentUrl);
                 await Task.Delay(3000);
 
+                if (File.Exists(filePath))
+                    return;
+
                 string script = @"
                     var img = document.querySelector('img');
                     if (img && img.complete) {
