@@ -143,22 +143,21 @@ namespace AIToady.Harvester
                     await File.WriteAllBytesAsync(filePath, attachmentBytes);
                 }
 
-                await ConsolidateDuplicateDownloads(filePath);
+                if (!ConsolidateDuplicateDownloads(filePath))
+                    CheckDownloadsFolderForFile(filePath);
             }
             catch { }
         }
 
-        private async Task CheckDownloadsFolderForFile(string filePath)
+        private void CheckDownloadsFolderForFile(string filePath)
         {
             try
             {
-                    await Task.Delay(5000);
-
-                string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                string downloadsPath = WebView.CoreWebView2.Profile.DefaultDownloadFolderPath;
                 string fileName = Path.GetFileName(filePath);
                 string downloadedFile = Path.Combine(downloadsPath, fileName);
 
-                if (File.Exists(downloadedFile))
+                if (File.Exists(downloadedFile) && !downloadedFile.Equals(filePath))
                 {
                     File.Move(downloadedFile, filePath, true);
                 }
@@ -166,7 +165,10 @@ namespace AIToady.Harvester
                 {
                     string normalizedFileName = Path.GetFileNameWithoutExtension(fileName).Replace(" ", ".").Replace("-", ".").ToLower() + Path.GetExtension(fileName).ToLower();
                     string normalizedDownloadedFile = Path.Combine(downloadsPath, normalizedFileName);
-                    if (File.Exists(normalizedDownloadedFile))
+                    if (normalizedDownloadedFile.Equals(filePath))
+                        return;
+
+                    if (!normalizedDownloadedFile.Equals(filePath) &&  File.Exists(normalizedDownloadedFile))
                     {
                         File.Move(normalizedDownloadedFile, filePath, true);
                     }
@@ -197,40 +199,50 @@ namespace AIToady.Harvester
             }
         }
 
-        private async Task ConsolidateDuplicateDownloads(string filePath)
+        private bool ConsolidateDuplicateDownloads(string filePath)
         {
-            if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || 
-                !File.Exists(filePath) || 
-                new FileInfo(filePath).Length > 10240)
-                return;
-                
-            await Task.Delay(5000);
-            
-            var files = Directory.GetFiles(WebView.CoreWebView2.Profile.DefaultDownloadFolderPath)
-                .Select(f => new { Path = f, Info = new FileInfo(f) })
-                .OrderBy(f => f.Info.CreationTime)
-                .ToList();
-
-            for (int i = 0; i < files.Count - 1; i++)
+            try
             {
-                for (int j = i + 1; j < files.Count; j++)
+                if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+                    !File.Exists(filePath) ||
+                    new FileInfo(filePath).Length > 10240)
+                    return false;
+
+                //await Task.Delay(1000);
+
+                var files = Directory.GetFiles(WebView.CoreWebView2.Profile.DefaultDownloadFolderPath, "*.pdf", SearchOption.TopDirectoryOnly)
+                    .Select(f => new { Path = f, Info = new FileInfo(f) })
+                    .OrderBy(f => f.Info.CreationTime)
+                    .ToList();
+
+                for (int i = 0; i < files.Count - 1; i++)
                 {
-                    var file1 = files[i];
-                    var file2 = files[j];
-
-                    if ((file2.Info.CreationTime - file1.Info.CreationTime).TotalSeconds <= 5 &&
-                        file1.Info.Extension.Equals(file2.Info.Extension, StringComparison.OrdinalIgnoreCase) &&
-                        char.ToLower(Path.GetFileNameWithoutExtension(file1.Path)[0]) == char.ToLower(Path.GetFileNameWithoutExtension(file2.Path)[0]))
+                    for (int j = i + 1; j < files.Count; j++)
                     {
-                        var smaller = file1.Info.Length < file2.Info.Length ? file1 : file2;
-                        var larger = file1.Info.Length >= file2.Info.Length ? file1 : file2;
+                        var file1 = files[i];
+                        var file2 = files[j];
 
-                        File.Copy(larger.Path, smaller.Path, true);
-                        File.Delete(larger.Path);
-                        _viewModel.AddLogEntry($"Consolidated duplicate downloads: kept {Path.GetFileName(smaller.Path)}, removed {Path.GetFileName(larger.Path)}");
-                        return;
+                        if ((file2.Info.CreationTime - file1.Info.CreationTime).TotalSeconds <= 5 &&
+                            file1.Info.Extension.Equals(file2.Info.Extension, StringComparison.OrdinalIgnoreCase) &&
+                            char.ToLower(Path.GetFileNameWithoutExtension(file1.Path)[0]) == char.ToLower(Path.GetFileNameWithoutExtension(file2.Path)[0]))
+                        {
+                            var smaller = file1.Info.Length < file2.Info.Length ? file1 : file2;
+                            var larger = file1.Info.Length >= file2.Info.Length ? file1 : file2;
+
+                            File.Copy(larger.Path, filePath, true);
+                            File.Delete(larger.Path);
+                            _viewModel.AddLogEntry($"Consolidated duplicate downloads: kept {Path.GetFileName(smaller.Path)}, removed {Path.GetFileName(larger.Path)}");
+                            return true;
+                        }
                     }
                 }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _viewModel.AddLogEntry($"ConsolidateDuplicateDownloads: {ex.Message}");
+                return false;
             }
         }
 

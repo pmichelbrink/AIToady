@@ -792,7 +792,7 @@ namespace AIToady.Harvester.ViewModels
                         string imagePath = Path.Combine(imagesFolder, fileName);
                         if (File.Exists(imagePath))
                         {
-                            AddLogEntry(fileName + " already exists, skipping download");
+                            AddLogEntry(fileName + " already exists, skipping image download");
                             continue;
                         }
 
@@ -858,8 +858,24 @@ namespace AIToady.Harvester.ViewModels
                             System.IO.Directory.CreateDirectory(attachmentsFolder);
 
                         string attachmentPath = System.IO.Path.Combine(attachmentsFolder, fileName);
+
+                        if (File.Exists(attachmentPath))
+                        {
+                            AddLogEntry(fileName + " already exists, skipping attachment download");
+                            continue;
+                        }
+
                         await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
-                        attachmentNames.Add(fileName);
+
+                        if (File.Exists(attachmentPath))
+                        {
+                            attachmentNames.Add(fileName);
+                        }
+                        else
+                        {
+                            _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Attachment Download Failed for " + fileName, "Attachment download failed for " + fileName);
+                            AddLogEntry($"Attachment download failed for {fileName}");
+                        }
                     }
                     catch (TaskCanceledException)
                     {
