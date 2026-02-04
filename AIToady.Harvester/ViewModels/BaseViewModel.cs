@@ -873,7 +873,7 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Attachment Download Failed for " + fileName, "Attachment download failed for " + fileName);
+                            //_emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Attachment Download Failed for " + fileName, "Attachment download failed for " + fileName);
                             AddLogEntry($"Attachment download failed for {fileName}");
                         }
                     }
