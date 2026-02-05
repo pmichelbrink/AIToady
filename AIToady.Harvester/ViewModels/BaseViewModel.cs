@@ -20,7 +20,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
-        protected int _messagesPerPage = 25;
+        protected int _messagesPerPage = 50;
         protected string _url = string.Empty;
         protected string _nextElement = ".pageNav-jump--next";
         protected string _threadElement = "structItem-title";
