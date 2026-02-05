@@ -127,7 +127,7 @@
                      PreviewTextInput="ThreadsToSkipTextBox_PreviewTextInput"
                      Margin="0,0,10,0" />
             <Label Grid.Column="4"
-                   Content="Messages Per Page:"
+                   Content="Min Messages Per Page:"
                    VerticalAlignment="Center" />
             <TextBox Grid.Column="5"
                      x:Name="MessagesPerPageTextBox"
