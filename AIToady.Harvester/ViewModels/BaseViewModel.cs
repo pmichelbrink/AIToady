@@ -47,7 +47,7 @@ namespace AIToady.Harvester.ViewModels
             "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com",
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
-            "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com"
+            "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -579,6 +579,11 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
             {
                 ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
+                return;
+            }
+            else if (uri.Host.Contains("thehighroad") && GetType() != typeof(HighRoadViewModel))
+            {
+                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.HighRoadViewModel);
                 return;
             }
 
@@ -1171,6 +1176,14 @@ namespace AIToady.Harvester.ViewModels
             // Strip query parameters
             if (attachmentUrl.Contains("attachment.php"))
                 return $"attachment_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+
+            // Handle XenForo attachment URLs like "attachments/upload_2022-10-1_13-3-38-png.1106301/"
+            if (Utilities.IsXenForoAttachmentUrl(attachmentUrl))
+            {
+                string xenForoFileName = Utilities.GetXenForoAttachmentFileName(attachmentUrl);
+                if (!string.IsNullOrEmpty(xenForoFileName))
+                    return xenForoFileName;
+            }
 
             // Strip query parameters
             if (attachmentUrl.Contains("?"))

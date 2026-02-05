@@ -15,7 +15,8 @@ namespace AIToady.Harvester
     public enum ViewModelType
     {
         TheAKForum,
-        AR15
+        AR15,
+        HighRoadViewModel
     }
 
     public partial class MainWindow : Window
@@ -116,6 +117,11 @@ namespace AIToady.Harvester
         {
             try
             {
+                if (Utilities.IsXenForoAttachmentUrl(attachmentUrl))
+                {
+                    await ExtractImageWithBrowser(attachmentUrl, filePath);
+                    return;
+                }
                 string currentUrl = WebView.Source?.ToString();
                 WebView.Source = new Uri(attachmentUrl);
                 await Task.Delay(3000);
@@ -332,6 +338,9 @@ namespace AIToady.Harvester
         {
             try
             {
+                if (Utilities.IsXenForoAttachmentUrl(imageUrl))
+                    return await ExtractImageWithBrowser(imageUrl, filePath);
+
                 // Handle Flickr album links
                 if (imageUrl.Contains("flickr.com") && imageUrl.Contains("/in/set-"))
                     return await ExtractFlickrAlbum(imageUrl, filePath);
@@ -706,6 +715,8 @@ namespace AIToady.Harvester
             BaseViewModel newViewModel;
             if (viewModelType == ViewModelType.TheAKForum)
                 newViewModel = _viewModel.CloneToViewModel<TheAKForumViewModel>();
+            else if (viewModelType == ViewModelType.HighRoadViewModel)
+                newViewModel = _viewModel.CloneToViewModel<HighRoadViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             

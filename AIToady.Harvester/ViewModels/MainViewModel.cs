@@ -35,6 +35,8 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "The FAL Files";
                         else if (Url.Contains("snipershide", StringComparison.InvariantCultureIgnoreCase))
                             SiteName = "Snipers Hide";
+                        else if (Url.Contains("thehighroad", StringComparison.InvariantCultureIgnoreCase))
+                            SiteName = "The High Road";
                     }
                 }
 
