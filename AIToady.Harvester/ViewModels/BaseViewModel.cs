@@ -20,7 +20,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
-        protected int _messagesPerPage = 25;
+        protected int _messagesPerPage = 50;
         protected string _url = string.Empty;
         protected string _nextElement = ".pageNav-jump--next";
         protected string _threadElement = "structItem-title";
@@ -1071,7 +1071,7 @@ namespace AIToady.Harvester.ViewModels
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
             Category = Properties.Settings.Default.Category ?? "";
             DarkMode = Properties.Settings.Default.DarkMode;
-            MessagesPerPage = Properties.Settings.Default.MessagesPerPage == 0 ? 25 : Properties.Settings.Default.MessagesPerPage;
+            MessagesPerPage = Properties.Settings.Default.MessagesPerPage == 0 ? 50 : Properties.Settings.Default.MessagesPerPage;
             
             var harvestSinceStr = Properties.Settings.Default.HarvestSince ?? "";
             if (!string.IsNullOrEmpty(harvestSinceStr) && DateTime.TryParse(harvestSinceStr, out var harvestSince))
