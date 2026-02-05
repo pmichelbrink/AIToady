@@ -11,7 +11,7 @@ namespace AIToady.Harvester.ViewModels
     {
         public AR15ViewModel()
         {
-            
+            MessagesPerPage = 50;
         }
 
         protected override bool IsBoardPage(string url)

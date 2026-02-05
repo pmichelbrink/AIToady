@@ -11,7 +11,7 @@ namespace AIToady.Harvester.ViewModels
     {
         public TheAKForumViewModel()
         {
-            
+            MessagesPerPage = 25;
         }
         protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
         {

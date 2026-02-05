@@ -441,8 +441,9 @@ namespace AIToady.Harvester.ViewModels
 
         protected async Task<ForumThread> HarvestThread(string threadUrl)
         {
-            _threadImageCounter = 1;
             _threadPageNumber = 1;
+            _threadImageCounter = 1;
+            string firstPostId = string.Empty;
             InvokeNavigateRequested(threadUrl);
             await Task.Delay(GetRandomizedDelay());
 
@@ -468,8 +469,18 @@ namespace AIToady.Harvester.ViewModels
                 _lastHarvestPageCall = DateTime.Now;
                 List<ForumMessage> pageMessages = await HarvestPage();
 
-                if (pageMessages.Count == 0)
+                if (pageMessages.Count != 0)
                 {
+                    if (_threadPageNumber == 1)
+                    {
+                        firstPostId = pageMessages[0].PostId;
+                    }
+                    else
+                    {
+                        // Some forums (looking at you, Gunboards) include the first post on every page
+                        if (pageMessages[0].PostId == firstPostId)
+                            pageMessages.RemoveAt(0);
+                    }
                 }
 
                 // Extract images and attachments for each message
@@ -572,19 +583,32 @@ namespace AIToady.Harvester.ViewModels
 
             Uri.TryCreate(url, UriKind.Absolute, out var uri);
 
-            if ((uri.Host.Contains("theakforum") || uri.Host.Contains("gunboards")) && GetType() != typeof(TheAKForumViewModel))
+            if (uri.Host.Contains("theakforum") && GetType() != typeof(TheAKForumViewModel))
             {
-                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.TheAKForum);
+                SiteName = "The AK Forum";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("gunboards") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Gunboards";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("glocktalk") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Glock Talk";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
             else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
             {
-                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.AR15);
+                ViewModelSwitchRequested?.Invoke(ViewModelType.AR15);
                 return;
             }
             else if (uri.Host.Contains("thehighroad") && GetType() != typeof(HighRoadViewModel))
             {
-                ViewModelSwitchRequested?.Invoke(Harvester.ViewModelType.HighRoadViewModel);
+                ViewModelSwitchRequested?.Invoke(ViewModelType.HighRoadViewModel);
                 return;
             }
 
