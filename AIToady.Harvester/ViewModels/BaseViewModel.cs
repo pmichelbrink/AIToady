@@ -47,7 +47,8 @@ namespace AIToady.Harvester.ViewModels
             "groundedparents.com", "adrenaljunkie.com", "kgcoatings.com", "arco-iris.com",
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
-            "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com"
+            "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com",
+            "community.webshots.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
