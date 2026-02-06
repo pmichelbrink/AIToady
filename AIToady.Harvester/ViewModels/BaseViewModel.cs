@@ -1086,7 +1086,7 @@ namespace AIToady.Harvester.ViewModels
         }
         public void InitializeTimer()
         {
-            _timer = new System.Timers.Timer(3600000); // Check every hour
+            _timer = new System.Timers.Timer(1800000); // Check every half hour
             _timer.Elapsed += (s, e) => RunTimerOperations();
             _timer.Start();
         }
