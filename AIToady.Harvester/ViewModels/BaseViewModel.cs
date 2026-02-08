@@ -611,6 +611,11 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.HighRoadViewModel);
                 return;
             }
+            else if (uri.Host.Contains("thefiringline") && GetType() != typeof(FiringLineViewModel))
+            {
+                ViewModelSwitchRequested?.Invoke(ViewModelType.FiringLineViewModel);
+                return;
+            }
 
             NavigateRequested?.Invoke(url);
             await Task.Delay(2000);
@@ -724,7 +729,14 @@ namespace AIToady.Harvester.ViewModels
             }
             return false;
         }
-
+        private void ConsolidateImagesAndAttachments(ForumThread thread)
+        {
+            //foreach (var message in thread.Messages)
+            //{
+            //    message.Attachments.Any(a => a.Contains();
+            //    message.AllMedia.AddRange(message.Attachments);
+            //}
+        }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
             string imagesFolder = Path.Combine(threadFolder, "Images");

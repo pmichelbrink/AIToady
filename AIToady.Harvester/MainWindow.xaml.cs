@@ -16,7 +16,8 @@ namespace AIToady.Harvester
     {
         TheAKForum,
         AR15,
-        HighRoadViewModel
+        HighRoadViewModel,
+        FiringLineViewModel
     }
 
     public partial class MainWindow : Window
@@ -333,12 +334,18 @@ namespace AIToady.Harvester
                 }
             }
         }
+        bool IsKnownValidImageUrl(string url)
+        {
+            if (url.Contains("thefiringline", StringComparison.InvariantCultureIgnoreCase))
+                return true;
 
+            return false;
+        }
         private async Task<string> ExtractImageFromWebView(string imageUrl, string filePath)
         {
             try
             {
-                if (Utilities.IsXenForoAttachmentUrl(imageUrl))
+                if (Utilities.IsXenForoAttachmentUrl(imageUrl) || IsKnownValidImageUrl(imageUrl))
                     return await ExtractImageWithBrowser(imageUrl, filePath);
 
                 // Handle Flickr album links
@@ -717,6 +724,8 @@ namespace AIToady.Harvester
                 newViewModel = _viewModel.CloneToViewModel<TheAKForumViewModel>();
             else if (viewModelType == ViewModelType.HighRoadViewModel)
                 newViewModel = _viewModel.CloneToViewModel<HighRoadViewModel>();
+            else if (viewModelType == ViewModelType.FiringLineViewModel)
+                newViewModel = _viewModel.CloneToViewModel<FiringLineViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             

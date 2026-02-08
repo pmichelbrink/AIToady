@@ -3,9 +3,9 @@ using System.Text.Json;
 
 namespace AIToady.Harvester.ViewModels
 {
-    public class HighRoadViewModel : BaseViewModel
+    public class FiringLineViewModel : BaseViewModel
     {
-        public HighRoadViewModel()
+        public FiringLineViewModel()
         {
             MessagesPerPage = 25;
         }
@@ -20,25 +20,11 @@ namespace AIToady.Harvester.ViewModels
                 }
 
                 string script = @"
-                    (function() {
-                        let threads = [];
-                        document.querySelectorAll('.structItem-title').forEach(div => {
-                            let anchor = div.querySelector('a[href*=""threads""]');
-                            if (anchor) {
-                                let url = anchor.href;
-                                let latestDate = null;
-                                let structItem = div.closest('.structItem');
-                                if (structItem) {
-                                    let timeElement = structItem.querySelector('.structItem-latestDate');
-                                    if (timeElement) {
-                                        latestDate = timeElement.getAttribute('datetime');
-                                    }
-                                }
-                                threads.push({ url: url, lastPostDate: latestDate });
-                            }
-                        });
-                        return JSON.stringify(threads);
-                    })()
+                    let threads = [];
+                    document.querySelectorAll('a[id^=""thread_title_""]').forEach(a => {
+                        threads.push({ url: a.href, lastPostDate: null });
+                    });
+                    JSON.stringify(threads);
                 ";
 
                 string result = await InvokeExecuteScriptRequested(script);
@@ -52,55 +38,63 @@ namespace AIToady.Harvester.ViewModels
                 AddLogEntry($"Error loading threads: {ex.Message}");
             }
         }
+        protected override async Task<string> GetThreadName(string threadUrl)
+        {
+            // Get thread name from page title
+            string titleScript = "document.title";
+            string titleResult = await InvokeExecuteScriptRequested(titleScript);
+            _threadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
+
+
+            if (_threadName.Contains(" - The Firing Line Forums"))
+                _threadName = _threadName.Split(" - The Firing Line Forums")[0].Trim();
+
+            // Extract thread ID from URL and append to thread name
+            var threadId = threadUrl.Substring(threadUrl.LastIndexOf("t=") + 2);
+            if (!string.IsNullOrEmpty(threadId))
+                _threadName += $"_{threadId}";
+
+            _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
+
+            return _threadName;
+        }
         protected async override Task<List<ForumMessage>> HarvestPage()
         {
-            string messageSelector = string.IsNullOrEmpty(MessageElement) ? ".message-inner" : MessageElement;
-            string extractScript = $@"
+            string extractScript = @"
                 let messages = [];
-                document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
-                    let userElement = messageDiv.querySelector('.message-name a') || messageDiv.querySelector('.message-name .username');
-                    let messageBodyElement = messageDiv.querySelector('.message-body');
-                    let timeElement = messageDiv.querySelector('.u-dt');
+                document.querySelectorAll('table[id^=""post""]').forEach(table => {
+                    let postId = table.id.replace('post', '');
+                    let userElement = table.querySelector('.bigusername');
+                    let messageBodyElement = table.querySelector('[id^=""post_message_""]');
+                    let dateElement = table.querySelector('.thead');
                     let images = [];
                     let attachments = [];
                     
-                    if (messageBodyElement) {{
-                        messageBodyElement.querySelectorAll('img.bbImage').forEach(img => {{
-                            let imageUrl = img.getAttribute('data-url') || img.src;
-                            if (imageUrl && !imageUrl.includes('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP')) {{
-                                images.push(imageUrl);
-                            }}
-                        }});
+                    if (messageBodyElement) {
+                        messageBodyElement.querySelectorAll('img').forEach(img => {
+                            if (img.src && !img.src.includes('/images/') && !img.src.includes('data:image')) {
+                                images.push(img.src);
+                            }
+                        });
                         
-                        // Extract all attachment files
-                        messageDiv.querySelectorAll('.file-preview').forEach(element => {{
-                            let attachmentUrl = element.href;
-                            if (attachmentUrl && attachmentUrl.includes('attachments')) {{
-                                attachments.push(attachmentUrl);
-                            }}
-                        }});
-                        }}
+                        table.querySelectorAll('a[href*=""attachment.php""]').forEach(a => {
+                            if (a.href.includes('attachmentid=')) {
+                                attachments.push(a.href);
+                            }
+                        });
+                    }
                     
-                    if (userElement && messageBodyElement) {{
-                        let postId = '';
-                        let currentElement = messageDiv;
-                        while (currentElement && !postId) {{
-                            postId = currentElement.getAttribute('data-lb-id') || currentElement.getAttribute('id') || '';
-                            currentElement = currentElement.parentElement;
-                        }}
-                        if (postId.startsWith('js-')) {{
-                            postId = postId.substring(3);
-                        }}
-                        messages.push({{
+                    if (userElement && messageBodyElement) {
+                        messages.push({
                             postId: postId,
                             username: userElement.textContent.trim(),
                             message: messageBodyElement.textContent.trim().replace(/\s+/g, ' '),
-                            timestamp: timeElement ? timeElement.getAttribute('datetime') : '',
+                            timestamp: dateElement ? dateElement.textContent.trim() : '',
                             images: images,
                             attachments: attachments
-                        }});
-                    }}
-                }});
+                        });
+                    }
+                });
                 JSON.stringify(messages);
             ";
 

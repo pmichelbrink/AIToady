@@ -19,7 +19,13 @@ namespace AIToady.Harvester.ViewModels
                 string script = @"
                     (function() {
                         let headerElement = document.querySelector('h1.p-title-value');
-                        return headerElement ? headerElement.textContent.trim() : '';
+                        if (headerElement) return headerElement.textContent.trim();
+                        
+                        let navbarElement = document.querySelector('td.navbar strong');
+                        if (navbarElement) {
+                            return navbarElement.textContent.replace(/<!--[\s\S]*?-->/g, '').trim();
+                        }
+                        return '';
                     })()
                 ";
                 string result = await InvokeExecuteScriptRequested(script);
@@ -37,6 +43,10 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Snipers Hide";
                         else if (Url.Contains("thehighroad", StringComparison.InvariantCultureIgnoreCase))
                             SiteName = "The High Road";
+                        else if (Url.Contains("thefiringline", StringComparison.InvariantCultureIgnoreCase))
+                            SiteName = "The Firing Line";
+                        else if (Url.Contains("accurateshooter", StringComparison.InvariantCultureIgnoreCase))
+                            SiteName = "Accurate Shooter";
                     }
                 }
 
