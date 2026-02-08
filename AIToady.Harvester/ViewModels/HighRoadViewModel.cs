@@ -9,6 +9,30 @@ namespace AIToady.Harvester.ViewModels
         {
             MessagesPerPage = 25;
         }
+        protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
+        {
+            SiteName = "The High Road";
+
+            try
+            {
+                string script = @"
+                    (function() {
+                        let headerElement = document.querySelector('h1.p-title-value');
+                        return headerElement ? headerElement.textContent.trim() : '';
+                    })()
+                ";
+                string result = await InvokeExecuteScriptRequested(script);
+                if (!string.IsNullOrEmpty(result))
+                {
+                    result = JsonSerializer.Deserialize<string>(result);
+                    if (!string.IsNullOrEmpty(result))
+                        ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
+                }
+
+                Category = string.Empty;
+            }
+            catch { }
+        }
         public override async Task ExecuteLoadThreads()
         {
             try

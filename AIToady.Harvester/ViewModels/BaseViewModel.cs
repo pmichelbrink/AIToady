@@ -1117,7 +1117,7 @@ namespace AIToady.Harvester.ViewModels
 
         public void RunTimerOperations()
         {
-            if (_isHarvesting && (DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
+            if ((DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
                 Task.Run(async () => await _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
                     $"Harvesting Stalled on {Environment.MachineName}", 
