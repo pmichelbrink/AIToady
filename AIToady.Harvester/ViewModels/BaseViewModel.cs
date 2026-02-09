@@ -468,6 +468,11 @@ namespace AIToady.Harvester.ViewModels
             {
                 _lastHarvestPageCall = DateTime.Now;
                 List<ForumMessage> pageMessages = await HarvestPage();
+                if (pageMessages.Count != 0)
+                {
+                    await Task.Delay(GetRandomizedDelay());
+                    pageMessages = await HarvestPage();
+                }
 
                 if (pageMessages.Count != 0)
                 {
@@ -481,6 +486,11 @@ namespace AIToady.Harvester.ViewModels
                         if (pageMessages[0].PostId == firstPostId)
                             pageMessages.RemoveAt(0);
                     }
+                }
+                else
+                {
+                    AddLogEntry($"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}");
+                    _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}", "");
                 }
 
                 // Extract images and attachments for each message
