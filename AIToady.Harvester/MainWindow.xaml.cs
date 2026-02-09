@@ -35,6 +35,8 @@ namespace AIToady.Harvester
             DataContext = _viewModel;
 
             LoadWindowSettings();
+            if (_viewModel.InPrivateMode)
+                InitializeWebView2InPrivate();
 
             _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
             _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
@@ -44,7 +46,11 @@ namespace AIToady.Harvester
             _viewModel.PromptUserInputRequested += PromptUserForInput;
             _viewModel.ClearCacheRequested += async () => await WebView.CoreWebView2?.Profile.ClearBrowsingDataAsync();
             _viewModel.SetDownloadFolderRequested += SetDownloadFolder;
-            _viewModel.PropertyChanged += (s, e) => { if (e.PropertyName == "DarkMode") ApplyTheme(); };
+            _viewModel.PropertyChanged += (s, e) => 
+            { 
+                if (e.PropertyName == "DarkMode") ApplyTheme();
+                if (e.PropertyName == "InPrivateMode") HandleInPrivateModeChange();
+            };
 
 
             WebView.NavigationCompleted += WebView_NavigationCompleted;
@@ -76,6 +82,19 @@ namespace AIToady.Harvester
             };
 
             Closing += MainWindow_Closing;
+        }
+
+        private void HandleInPrivateModeChange()
+        {
+            MessageBox.Show("InPrivate mode change will take effect after restarting the application.", "Restart Required", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private async void InitializeWebView2InPrivate()
+        {
+            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync();
+            var options = env.CreateCoreWebView2ControllerOptions();
+            options.IsInPrivateModeEnabled = true;
+            await WebView.EnsureCoreWebView2Async(env, options);
         }
 
         private void LoadWindowSettings()

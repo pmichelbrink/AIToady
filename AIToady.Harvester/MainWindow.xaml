@@ -101,6 +101,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Label Content="Thread Element:"
@@ -176,6 +177,11 @@
             <CheckBox Grid.Column="13"
                       Content="🌙 Dark Mode"
                       IsChecked="{Binding DarkMode}"
+                      VerticalAlignment="Center"
+                      Margin="5,0" />
+            <CheckBox Grid.Column="14"
+                      Content="🔒 InPrivate"
+                      IsChecked="{Binding InPrivateMode}"
                       VerticalAlignment="Center"
                       Margin="5,0" />
         </Grid>

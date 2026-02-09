@@ -35,6 +35,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _skipExistingThreads = true;
         protected bool _hoursOfOperationEnabled = true;
         protected bool _darkMode = true;
+        protected bool _inPrivateMode = false;
         protected ObservableCollection<string> _scheduledForums = new ObservableCollection<string>();
         protected List<ThreadInfo> _threadInfos = new List<ThreadInfo>();
         protected HashSet<string> _badDomains = new HashSet<string>
@@ -211,6 +212,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _darkMode;
             set => SetProperty(ref _darkMode, value);
+        }
+
+        public bool InPrivateMode
+        {
+            get => _inPrivateMode;
+            set => SetProperty(ref _inPrivateMode, value);
         }
 
         public ObservableCollection<string> ScheduledForums => _scheduledForums;
@@ -468,7 +475,7 @@ namespace AIToady.Harvester.ViewModels
             {
                 _lastHarvestPageCall = DateTime.Now;
                 List<ForumMessage> pageMessages = await HarvestPage();
-                if (pageMessages.Count != 0)
+                if (pageMessages.Count == 0)
                 {
                     await Task.Delay(GetRandomizedDelay());
                     pageMessages = await HarvestPage();
@@ -482,10 +489,12 @@ namespace AIToady.Harvester.ViewModels
                     }
                     else
                     {
-                        // Some forums (looking at you, Gunboards) include the first post on every page
+                        // Some forums include the first post on every page
                         if (pageMessages[0].PostId == firstPostId)
                             pageMessages.RemoveAt(0);
                     }
+
+                    ConsolidateImagesAndAttachments(pageMessages);
                 }
                 else
                 {
@@ -739,13 +748,19 @@ namespace AIToady.Harvester.ViewModels
             }
             return false;
         }
-        private void ConsolidateImagesAndAttachments(ForumThread thread)
+        private void ConsolidateImagesAndAttachments(List<ForumMessage> messages)
         {
-            //foreach (var message in thread.Messages)
-            //{
-            //    message.Attachments.Any(a => a.Contains();
-            //    message.AllMedia.AddRange(message.Attachments);
-            //}
+            messages.ForEach(m => m.Attachments = m.Attachments
+                .Where(a => !m.Images.Any(img => GetUrlKey(a) == GetUrlKey(img)))
+                .ToList());
+        }
+
+        private string GetUrlKey(string url)
+        {
+            var query = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Query : "";
+            var attachmentId = System.Text.RegularExpressions.Regex.Match(query, @"attachmentid=(\d+)").Groups[1].Value;
+            var d = System.Text.RegularExpressions.Regex.Match(query, @"[&?]d=(\d+)").Groups[1].Value;
+            return $"{attachmentId}|{d}";
         }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
@@ -1037,6 +1052,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.EmailPassword = EmailPassword;
             Properties.Settings.Default.Category = Category;
             Properties.Settings.Default.DarkMode = DarkMode;
+            Properties.Settings.Default.InPrivateMode = InPrivateMode;
             Properties.Settings.Default.MessagesPerPage = MessagesPerPage;
             Properties.Settings.Default.HarvestSince = HarvestSince?.ToString("o") ?? "";
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
@@ -1093,6 +1109,7 @@ namespace AIToady.Harvester.ViewModels
             EmailPassword = Properties.Settings.Default.EmailPassword ?? "";
             Category = Properties.Settings.Default.Category ?? "";
             DarkMode = Properties.Settings.Default.DarkMode;
+            InPrivateMode = Properties.Settings.Default.InPrivateMode;
             MessagesPerPage = Properties.Settings.Default.MessagesPerPage == 0 ? 50 : Properties.Settings.Default.MessagesPerPage;
             
             var harvestSinceStr = Properties.Settings.Default.HarvestSince ?? "";
