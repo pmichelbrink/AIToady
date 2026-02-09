@@ -91,10 +91,26 @@ namespace AIToady.Harvester
 
         private async void InitializeWebView2InPrivate()
         {
-            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync();
+            var random = new Random();
+            var userDataFolder = Path.Combine(Path.GetTempPath(), "WebView2_" + Guid.NewGuid().ToString("N")[..8]);
+            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
             var options = env.CreateCoreWebView2ControllerOptions();
             options.IsInPrivateModeEnabled = true;
             await WebView.EnsureCoreWebView2Async(env, options);
+            
+            WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            WebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            
+            var cores = random.Next(2, 17);
+            var memory = new[] { 2, 4, 8, 16, 32, 64, 96, 128 }[random.Next(8)];
+            var platforms = new[] { "Win32", "Linux x86_64", "MacIntel" };
+            var platform = platforms[random.Next(platforms.Length)];
+            
+            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($@"
+                Object.defineProperty(navigator, 'hardwareConcurrency', {{ get: () => {cores} }});
+                Object.defineProperty(navigator, 'deviceMemory', {{ get: () => {memory} }});
+                Object.defineProperty(navigator, 'platform', {{ get: () => '{platform}' }});
+            ");
         }
 
         private void LoadWindowSettings()
