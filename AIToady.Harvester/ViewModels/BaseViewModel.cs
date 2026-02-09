@@ -493,8 +493,6 @@ namespace AIToady.Harvester.ViewModels
                         if (pageMessages[0].PostId == firstPostId)
                             pageMessages.RemoveAt(0);
                     }
-
-                    ConsolidateImagesAndAttachments(pageMessages);
                 }
                 else
                 {

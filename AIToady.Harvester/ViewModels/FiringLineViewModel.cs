@@ -134,7 +134,8 @@ namespace AIToady.Harvester.ViewModels
                 try
                 {
                     result = JsonSerializer.Deserialize<string>(result);
-                    return JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                    var messages = JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                    return ConsolidateImagesAndAttachments(messages);
                 }
                 catch
                 {
@@ -143,6 +144,25 @@ namespace AIToady.Harvester.ViewModels
             }
 
             return new List<ForumMessage>();
+        }
+        private List<ForumMessage> ConsolidateImagesAndAttachments(List<ForumMessage> messages)
+        {
+            return messages.Select(m => new ForumMessage
+            {
+                PostId = m.PostId,
+                Username = m.Username,
+                Message = m.Message,
+                Timestamp = m.Timestamp,
+                Images = m.Images,
+                Attachments = m.Attachments.Where(a => !m.Images.Any(img => GetUrlKey(a) == GetUrlKey(img))).ToList()
+            }).ToList();
+        }
+
+        private string GetUrlKey(string url)
+        {
+            var query = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Query : "";
+            var attachmentId = System.Text.RegularExpressions.Regex.Match(query, @"attachmentid=(\d+)").Groups[1].Value;
+            return attachmentId;
         }
         protected async override Task<bool> CheckIfNextPageExists(int currentPageMessageCount)
         {
