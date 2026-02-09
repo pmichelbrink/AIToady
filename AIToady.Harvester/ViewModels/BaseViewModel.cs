@@ -759,8 +759,7 @@ namespace AIToady.Harvester.ViewModels
         {
             var query = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Query : "";
             var attachmentId = System.Text.RegularExpressions.Regex.Match(query, @"attachmentid=(\d+)").Groups[1].Value;
-            var d = System.Text.RegularExpressions.Regex.Match(query, @"[&?]d=(\d+)").Groups[1].Value;
-            return $"{attachmentId}|{d}";
+            return attachmentId;
         }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
@@ -1237,8 +1236,16 @@ namespace AIToady.Harvester.ViewModels
             if (attachmentUrl.Contains("googleusercontent.com"))
                 return $"google_photo_{Guid.NewGuid().ToString("N")[..8]}.jpg";
 
-            // Strip query parameters
-            if (attachmentUrl.Contains("attachment.php"))
+            // Extract attachmentid from attachment.php URLs
+            if (attachmentUrl.Contains("attachment.php") && attachmentUrl.Contains("attachmentid="))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(attachmentUrl, @"attachmentid=(\d+)");
+                if (match.Success)
+                    return $"attachment_{match.Groups[1].Value}.jpg";
+
+                return $"attachment_{Guid.NewGuid().ToString("N")[..8]}.jpg";
+            }
+            else if (attachmentUrl.Contains("attachment.php"))
                 return $"attachment_{Guid.NewGuid().ToString("N")[..8]}.jpg";
 
             // Handle XenForo attachment URLs like "attachments/upload_2022-10-1_13-3-38-png.1106301/"

@@ -1,4 +1,5 @@
 using AIToady.Harvester.Models;
+using System.IO;
 using System.Text.Json;
 
 namespace AIToady.Harvester.ViewModels
@@ -8,6 +9,35 @@ namespace AIToady.Harvester.ViewModels
         public FiringLineViewModel()
         {
             MessagesPerPage = 25;
+        }
+        protected override async Task ExtractForumName(bool skipCategoryPrompt = false)
+        {
+            SiteName = "The Firing Line";
+            try
+            {
+                string script = @"
+                    (function() {
+                        let headerElement = document.querySelector('h1.p-title-value');
+                        if (headerElement) return headerElement.textContent.trim();
+                        
+                        let navbarElement = document.querySelector('td.navbar strong');
+                        if (navbarElement) {
+                            return navbarElement.textContent.replace(/<!--[\s\S]*?-->/g, '').trim();
+                        }
+                        return '';
+                    })()
+                ";
+                string result = await InvokeExecuteScriptRequested(script);
+                if (!string.IsNullOrEmpty(result))
+                {
+                    result = JsonSerializer.Deserialize<string>(result);
+                    if (!string.IsNullOrEmpty(result))
+                        ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
+                }
+
+                Category = string.Empty;
+            }
+            catch { }
         }
         public override async Task ExecuteLoadThreads()
         {
@@ -127,7 +157,7 @@ namespace AIToady.Harvester.ViewModels
             {
                 string script = @"
                     (function() {
-                        let nextButton = document.querySelector('.pageNav-jump.pageNav-jump--next');
+                        let nextButton = document.querySelector('a[rel=""next""][class=""smallfont""]');
                         if (nextButton) {
                             nextButton.click();
                             return 'clicked';

@@ -3,6 +3,7 @@ using AIToady.Infrastructure;
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
@@ -92,7 +93,7 @@ namespace AIToady.Harvester
         private async void InitializeWebView2InPrivate()
         {
             var random = new Random();
-            var userDataFolder = Path.Combine(Path.GetTempPath(), "WebView2_" + Guid.NewGuid().ToString("N")[..8]);
+            var userDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "WebView2_" + Guid.NewGuid().ToString("N")[..8]);
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
             var options = env.CreateCoreWebView2ControllerOptions();
             options.IsInPrivateModeEnabled = true;
