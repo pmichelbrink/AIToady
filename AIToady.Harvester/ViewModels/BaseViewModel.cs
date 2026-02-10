@@ -474,9 +474,11 @@ namespace AIToady.Harvester.ViewModels
             while (_isHarvesting && hasNextPage)
             {
                 _lastHarvestPageCall = DateTime.Now;
+                string currentUrl = await InvokeExecuteScriptRequested("window.location.href");
                 List<ForumMessage> pageMessages = await HarvestPage();
                 if (pageMessages.Count == 0)
                 {
+                    await InvokeExecuteScriptRequested("location.reload();");
                     await Task.Delay(GetRandomizedDelay());
                     pageMessages = await HarvestPage();
                 }
@@ -612,10 +614,10 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
-            else if (uri.Host.Contains("glocktalk") && GetType() != typeof(TheAKForumViewModel))
+            else if (uri.Host.Contains("glocktalk") && GetType() != typeof(GlockTalkViewModel))
             {
                 SiteName = "Glock Talk";
-                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
                 return;
             }
             else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))

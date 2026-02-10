@@ -18,7 +18,8 @@ namespace AIToady.Harvester
         TheAKForum,
         AR15,
         HighRoadViewModel,
-        FiringLineViewModel
+        FiringLineViewModel,
+        GlockTalk
     }
 
     public partial class MainWindow : Window
@@ -762,6 +763,8 @@ namespace AIToady.Harvester
                 newViewModel = _viewModel.CloneToViewModel<HighRoadViewModel>();
             else if (viewModelType == ViewModelType.FiringLineViewModel)
                 newViewModel = _viewModel.CloneToViewModel<FiringLineViewModel>();
+            else if (viewModelType == ViewModelType.GlockTalk)
+                newViewModel = _viewModel.CloneToViewModel<GlockTalkViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             
