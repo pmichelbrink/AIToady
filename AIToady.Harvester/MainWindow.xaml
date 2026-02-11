@@ -179,11 +179,6 @@
                       IsChecked="{Binding DarkMode}"
                       VerticalAlignment="Center"
                       Margin="5,0" />
-            <CheckBox Grid.Column="14"
-                      Content="🔒 InPrivate"
-                      IsChecked="{Binding InPrivateMode}"
-                      VerticalAlignment="Center"
-                      Margin="5,0" />
         </Grid>
 
         <Grid Grid.Row="2" Margin="5,0">
@@ -342,6 +337,11 @@
                     Height="25"
                     Click="ScheduleForumsButton_Click"
                     Margin="5,0" />
+            <CheckBox Grid.Column="8"
+                      Content="🔒 InPrivate"
+                      IsChecked="{Binding InPrivateMode}"
+                      VerticalAlignment="Center"
+                      Margin="5,0" />
         </Grid>
         
         <wv2:WebView2 x:Name="WebView" Grid.Row="3" Margin="5,0"/>
