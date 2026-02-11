@@ -109,7 +109,7 @@ namespace AIToady.Harvester.ViewModels
                 document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
                     let userElement = messageDiv.querySelector('.message-name a') || messageDiv.querySelector('.message-name .username');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
-                    let timeElement = messageDiv.querySelector('.u-dt');
+                    let timeElement = messageDiv.querySelector('.u-dt') || messageDiv.querySelector('time[datetime]');
                     let images = [];
                     let attachments = [];
                     
@@ -160,8 +160,8 @@ namespace AIToady.Harvester.ViewModels
             {
                 try
                 {
-                    result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
-                    return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                    result = JsonSerializer.Deserialize<string>(result);
+                    return JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
                 }
                 catch
                 {

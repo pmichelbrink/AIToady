@@ -474,7 +474,7 @@ namespace AIToady.Harvester.ViewModels
             while (_isHarvesting && hasNextPage)
             {
                 _lastHarvestPageCall = DateTime.Now;
-                string currentUrl = await InvokeExecuteScriptRequested("window.location.href");
+
                 List<ForumMessage> pageMessages = await HarvestPage();
                 if (pageMessages.Count == 0)
                 {
@@ -485,6 +485,8 @@ namespace AIToady.Harvester.ViewModels
 
                 if (pageMessages.Count != 0)
                 {
+                    pageMessages = ConsolidateImagesAndAttachments(pageMessages);
+
                     if (_threadPageNumber == 1)
                     {
                         firstPostId = pageMessages[0].PostId;
@@ -561,6 +563,9 @@ namespace AIToady.Harvester.ViewModels
 
             _threadName = string.Join("_", _threadName.Split(System.IO.Path.GetInvalidFileNameChars()));
 
+            if (_threadName.EndsWith("_unread"))
+                _threadName = _threadName.Substring(0, _threadName.Length - 7);
+
             return _threadName;
         }
 
@@ -613,6 +618,12 @@ namespace AIToady.Harvester.ViewModels
                 SiteName = "Gunboards";
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
+            }
+            else if (uri.Host.Contains("nosler"))
+            {
+                SiteName = "Nosler";
+                //ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
+                //return;
             }
             else if (uri.Host.Contains("glocktalk") && GetType() != typeof(GlockTalkViewModel))
             {
@@ -748,18 +759,17 @@ namespace AIToady.Harvester.ViewModels
             }
             return false;
         }
-        private void ConsolidateImagesAndAttachments(List<ForumMessage> messages)
+        private List<ForumMessage> ConsolidateImagesAndAttachments(List<ForumMessage> pageMessages)
         {
-            messages.ForEach(m => m.Attachments = m.Attachments
-                .Where(a => !m.Images.Any(img => GetUrlKey(a) == GetUrlKey(img)))
-                .ToList());
-        }
-
-        private string GetUrlKey(string url)
-        {
-            var query = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Query : "";
-            var attachmentId = System.Text.RegularExpressions.Regex.Match(query, @"attachmentid=(\d+)").Groups[1].Value;
-            return attachmentId;
+            return pageMessages.Select(m => new ForumMessage
+            {
+                PostId = m.PostId,
+                Username = m.Username,
+                Message = m.Message,
+                Timestamp = m.Timestamp,
+                Images = m.Images,
+                Attachments = m.Attachments.Where(a => !m.Images.Contains(a)).ToList()
+            }).ToList();
         }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
         {
@@ -858,6 +868,8 @@ namespace AIToady.Harvester.ViewModels
                         string imagePath = Path.Combine(imagesFolder, fileName);
                         if (File.Exists(imagePath))
                         {
+                            imageNames.Add(fileName);
+                            _threadImageCounter++;
                             AddLogEntry(fileName + " already exists, skipping image download");
                             continue;
                         }
@@ -927,6 +939,7 @@ namespace AIToady.Harvester.ViewModels
 
                         if (File.Exists(attachmentPath))
                         {
+                            attachmentNames.Add(fileName);
                             AddLogEntry(fileName + " already exists, skipping attachment download");
                             continue;
                         }
