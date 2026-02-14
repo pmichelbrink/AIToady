@@ -101,9 +101,11 @@ namespace AIToady.Harvester.ViewModels
                 (function() {
                     let messages = [];
                     
-                    // Handle MessageCard__container elements
-                    document.querySelectorAll('.MessageCard__container').forEach(messageDiv => {
-                        let userElement = messageDiv.querySelector('.MessageCard__user-info__name');
+                    // Handle both MessageCard__container and article.message--post elements
+                    let messageContainers = document.querySelectorAll('.MessageCard__container, article.message--post[qid=""post-item""]');
+                    
+                    messageContainers.forEach(messageDiv => {
+                        let userElement = messageDiv.querySelector('.MessageCard__user-info__name, .message-name .username');
                         let messageBodyElement = messageDiv.querySelector('.message-body');
                         let timeElement = messageDiv.querySelector('.u-dt, time');
                         let images = [];
@@ -141,16 +143,12 @@ namespace AIToady.Harvester.ViewModels
                         attachments = Array.from(attachmentUrls);
                         
                         if (messageBodyElement) {
-                            let postId = '';
-                            let currentElement = messageDiv;
-                            while (currentElement && !postId) {
-                                let dataLbId = currentElement.getAttribute('data-lb-id');
-                                if (dataLbId && dataLbId.startsWith('post-')) {
-                                    postId = dataLbId.replace('post-', '');
-                                    break;
+                            let postId = messageDiv.getAttribute('data-content') || '';
+                            if (!postId) {
+                                let lbElement = messageDiv.querySelector('[data-lb-id^=""post-""]');
+                                if (lbElement) {
+                                    postId = lbElement.getAttribute('data-lb-id').replace('post-', '');
                                 }
-                                postId = currentElement.getAttribute('id') || '';
-                                currentElement = currentElement.parentElement;
                             }
                             if (postId.startsWith('js-')) {
                                 postId = postId.substring(3);
