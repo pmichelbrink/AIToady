@@ -607,6 +607,13 @@ namespace AIToady.Harvester
             }
         }
 
+        private void UrlTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox != null)
+                Dispatcher.BeginInvoke(new Action(() => textBox.SelectAll()));
+        }
+
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             WebView.CoreWebView2?.ExecuteScriptAsync("window.history.back();");
