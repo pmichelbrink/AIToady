@@ -484,11 +484,11 @@ namespace AIToady.Harvester
         {
             string currentUrl = WebView.Source?.ToString();
             WebView.Source = new Uri(imageUrl);
-            await Task.Delay(2000);
+            await Task.Delay(4000);
 
             string script = @"
                     var img = document.querySelector('img');
-                    if (img && img.complete) {
+                    if (img) {
                         var canvas = document.createElement('canvas');
                         canvas.width = img.naturalWidth || img.width;
                         canvas.height = img.naturalHeight || img.height;

@@ -1255,7 +1255,16 @@ namespace AIToady.Harvester.ViewModels
         }
 
         public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
-        {                        // Generate random filename for Google Photos URLs
+        {
+            // Handle file.php?id= URLs
+            if (attachmentUrl.Contains("file.php?id="))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(attachmentUrl, @"id=(\d+)");
+                if (match.Success)
+                    return $"{match.Groups[1].Value}.jpg";
+            }
+
+            // Generate random filename for Google Photos URLs
             if (attachmentUrl.Contains("googleusercontent.com"))
                 return $"google_photo_{Guid.NewGuid().ToString("N")[..8]}.jpg";
 

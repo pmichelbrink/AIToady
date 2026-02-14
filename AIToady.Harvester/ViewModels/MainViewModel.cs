@@ -171,5 +171,46 @@ namespace AIToady.Harvester.ViewModels
             
             return new List<ForumMessage>();
         }
+        protected override bool IsBoardPage(string url)
+        {
+            if (url.Contains("/forums/bullet-tests.41", StringComparison.OrdinalIgnoreCase))
+                return true;
+            else
+                return false;
+        }
+        protected override async Task LoadForumLinksFromBoard()
+        {
+            try
+            {
+                string script = @"
+                    let links = [];
+                    document.querySelectorAll('a[href*=""/forums/""]').forEach(a => {
+                        if (a.href.match(/\/forums\/[^\/]+\/?$/)) {
+                            links.push(a.href);
+                        }
+                    });
+                    JSON.stringify([...new Set(links)]);
+                ";
+                
+                string result = await InvokeExecuteScriptRequested(script);
+                result = JsonSerializer.Deserialize<string>(result);
+                var links = JsonSerializer.Deserialize<string[]>(result);
+
+                foreach (var link in links)
+                {
+                    if (!_scheduledForums.Contains(link))
+                    {
+                        _scheduledForums.Add(link);
+                    }
+                }
+
+                SaveSettings();
+                AddLogEntry($"Added {links.Length} forums to schedule");
+            }
+            catch (Exception ex)
+            {
+                AddLogEntry($"Error loading forum links from board: {ex.Message}");
+            }
+        }
     }
 } 

@@ -125,11 +125,8 @@ namespace AIToady.Harvester.ViewModels
                         // Extract images from lbContainer elements in entire message container
                         messageDiv.querySelectorAll('.lbContainer-zoomer').forEach(zoomer => {
                             let imageUrl = zoomer.getAttribute('data-src');
-                            if (imageUrl) {
-                                imageUrl = imageUrl.split('?')[0];
-                                if (imageUrl && !images.includes(imageUrl)) {
-                                    images.push(imageUrl);
-                                }
+                            if (imageUrl && !images.includes(imageUrl)) {
+                                images.push(imageUrl);
                             }
                         });
                         
