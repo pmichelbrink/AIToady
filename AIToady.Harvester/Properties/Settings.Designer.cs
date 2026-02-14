@@ -346,5 +346,17 @@ namespace AIToady.Harvester.Properties {
                 this["InPrivateMode"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SkipImages {
+            get {
+                return ((bool)(this["SkipImages"]));
+            }
+            set {
+                this["SkipImages"] = value;
+            }
+        }
     }
 }

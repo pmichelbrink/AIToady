@@ -36,6 +36,7 @@ namespace AIToady.Harvester.ViewModels
         protected bool _hoursOfOperationEnabled = true;
         protected bool _darkMode = true;
         protected bool _inPrivateMode = false;
+        protected bool _skipImages = false;
         protected ObservableCollection<string> _scheduledForums = new ObservableCollection<string>();
         protected List<ThreadInfo> _threadInfos = new List<ThreadInfo>();
         protected HashSet<string> _badDomains = new HashSet<string>
@@ -218,6 +219,12 @@ namespace AIToady.Harvester.ViewModels
         {
             get => _inPrivateMode;
             set => SetProperty(ref _inPrivateMode, value);
+        }
+
+        public bool SkipImages
+        {
+            get => _skipImages;
+            set => SetProperty(ref _skipImages, value);
         }
 
         public ObservableCollection<string> ScheduledForums => _scheduledForums;
@@ -505,7 +512,8 @@ namespace AIToady.Harvester.ViewModels
                 }
 
                 // Extract images and attachments for each message
-                await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
+                if (!_skipImages)
+                    await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
 
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
@@ -1067,6 +1075,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.InPrivateMode = InPrivateMode;
             Properties.Settings.Default.MessagesPerPage = MessagesPerPage;
             Properties.Settings.Default.HarvestSince = HarvestSince?.ToString("o") ?? "";
+            Properties.Settings.Default.SkipImages = SkipImages;
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
             Properties.Settings.Default.Save();
         }
@@ -1123,8 +1132,9 @@ namespace AIToady.Harvester.ViewModels
             DarkMode = Properties.Settings.Default.DarkMode;
             InPrivateMode = Properties.Settings.Default.InPrivateMode;
             MessagesPerPage = Properties.Settings.Default.MessagesPerPage == 0 ? 50 : Properties.Settings.Default.MessagesPerPage;
-            
+
             var harvestSinceStr = Properties.Settings.Default.HarvestSince ?? "";
+            SkipImages = Properties.Settings.Default.SkipImages;
             if (!string.IsNullOrEmpty(harvestSinceStr) && DateTime.TryParse(harvestSinceStr, out var harvestSince))
                 HarvestSince = harvestSince;
             

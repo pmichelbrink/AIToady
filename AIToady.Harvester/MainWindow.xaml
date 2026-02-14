@@ -197,6 +197,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <GroupBox Grid.Column="4"
                       Header="Email"
@@ -340,6 +341,11 @@
             <CheckBox Grid.Column="8"
                       Content="🔒 InPrivate"
                       IsChecked="{Binding InPrivateMode}"
+                      VerticalAlignment="Center"
+                      Margin="5,0" />
+            <CheckBox Grid.Column="9"
+                      Content="Skip Images"
+                      IsChecked="{Binding SkipImages}"
                       VerticalAlignment="Center"
                       Margin="5,0" />
         </Grid>
