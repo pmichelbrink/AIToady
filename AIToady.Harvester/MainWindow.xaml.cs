@@ -1,11 +1,7 @@
 using AIToady.Harvester.ViewModels;
 using AIToady.Infrastructure;
-using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,6 +25,7 @@ namespace AIToady.Harvester
         private bool _isThreadElementCapture = false;
         private bool _isMessageElementCapture = false;
         private HashSet<string> _domains409 = new HashSet<string>();
+        private bool _webViewInitialized = false;
 
         public MainWindow()
         {
@@ -37,11 +34,9 @@ namespace AIToady.Harvester
             DataContext = _viewModel;
 
             LoadWindowSettings();
-            if (_viewModel.InPrivateMode)
-                InitializeWebView2InPrivate();
 
-            _viewModel.NavigateRequested += url => WebView.Source = new Uri(url);
-            _viewModel.ExecuteScriptRequested += async script => await WebView.ExecuteScriptAsync(script);
+            _viewModel.NavigateRequested += async url => { await EnsureWebViewInitialized(); WebView.Source = new Uri(url); };
+            _viewModel.ExecuteScriptRequested += async script => { await EnsureWebViewInitialized(); return await WebView.ExecuteScriptAsync(script); };
             _viewModel.ExtractImageRequested += ExtractImageFromWebView;
             _viewModel.ExtractAttachmentRequested += ExtractAttachmentFromWebView;
             _viewModel.ViewModelSwitchRequested += viewModelType => SwitchViewModel(viewModelType);
@@ -54,36 +49,64 @@ namespace AIToady.Harvester
                 if (e.PropertyName == "InPrivateMode") HandleInPrivateModeChange();
             };
 
-
-            WebView.NavigationCompleted += WebView_NavigationCompleted;
-            WebView.CoreWebView2InitializationCompleted += async (s, e) => {
-                //await WebView.CoreWebView2.Profile.ClearBrowsingDataAsync();
-
-                WebView.CoreWebView2.ProcessFailed += (sender, args) => {
-                    Dispatcher.Invoke(() => WebView.Reload());
-                };
-
-                WebView.CoreWebView2.ScriptDialogOpening += async (sender, args) => {
-                    await Task.Delay(5000);
-                    _viewModel.AddLogEntry($"Clicking OK to this alert message: {args.Message}.");
-                    args.Accept();
-                };
-
-                WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
-                    if (_isCapturingElement) {
-                        string result = args.TryGetWebMessageAsString();
-                        if (_isThreadElementCapture)
-                            _viewModel.ThreadElement = result;
-                        else if (_isMessageElementCapture)
-                            _viewModel.MessageElement = result;
-                        else
-                            _viewModel.NextElement = result;
-                        _isCapturingElement = false;
-                    }
-                };
-            };
-
             Closing += MainWindow_Closing;
+        }
+
+        private async Task EnsureWebViewInitialized()
+        {
+            if (_webViewInitialized) return;
+            
+            var uri = new Uri(_viewModel.Url.StartsWith("http") ? _viewModel.Url : "https://" + _viewModel.Url);
+            var userDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "WebView2_" + uri.Host.Replace(".", "_"));
+            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
+            
+            if (_viewModel.InPrivateMode)
+            {
+                var options = env.CreateCoreWebView2ControllerOptions();
+                options.IsInPrivateModeEnabled = true;
+                await WebView.EnsureCoreWebView2Async(env, options);
+                
+                WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+                WebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+                
+                var random = new Random();
+                var cores = random.Next(2, 17);
+                var memory = new[] { 2, 4, 8, 16, 32, 64, 96, 128 }[random.Next(8)];
+                var platforms = new[] { "Win32", "Linux x86_64", "MacIntel" };
+                var platform = platforms[random.Next(platforms.Length)];
+                
+                await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($@"
+                    Object.defineProperty(navigator, 'hardwareConcurrency', {{ get: () => {cores} }});
+                    Object.defineProperty(navigator, 'deviceMemory', {{ get: () => {memory} }});
+                    Object.defineProperty(navigator, 'platform', {{ get: () => '{platform}' }});
+                ");
+            }
+            else
+            {
+                await WebView.EnsureCoreWebView2Async(env);
+            }
+            
+            WebView.NavigationCompleted += WebView_NavigationCompleted;
+            WebView.CoreWebView2.ProcessFailed += (sender, args) => Dispatcher.Invoke(() => WebView.Reload());
+            WebView.CoreWebView2.ScriptDialogOpening += async (sender, args) => {
+                await Task.Delay(5000);
+                _viewModel.AddLogEntry($"Clicking OK to this alert message: {args.Message}.");
+                args.Accept();
+            };
+            WebView.CoreWebView2.WebMessageReceived += (sender, args) => {
+                if (_isCapturingElement) {
+                    string result = args.TryGetWebMessageAsString();
+                    if (_isThreadElementCapture)
+                        _viewModel.ThreadElement = result;
+                    else if (_isMessageElementCapture)
+                        _viewModel.MessageElement = result;
+                    else
+                        _viewModel.NextElement = result;
+                    _isCapturingElement = false;
+                }
+            };
+            
+            _webViewInitialized = true;
         }
 
         private void HandleInPrivateModeChange()
@@ -91,31 +114,7 @@ namespace AIToady.Harvester
             MessageBox.Show("InPrivate mode change will take effect after restarting the application.", "Restart Required", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private async void InitializeWebView2InPrivate()
-        {
-            var random = new Random();
-            var userDataFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "WebView2_" + Guid.NewGuid().ToString("N")[..8]);
-            var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
-            var options = env.CreateCoreWebView2ControllerOptions();
-            options.IsInPrivateModeEnabled = true;
-            await WebView.EnsureCoreWebView2Async(env, options);
-            
-            WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-            WebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
-            
-            var cores = random.Next(2, 17);
-            var memory = new[] { 2, 4, 8, 16, 32, 64, 96, 128 }[random.Next(8)];
-            var platforms = new[] { "Win32", "Linux x86_64", "MacIntel" };
-            var platform = platforms[random.Next(platforms.Length)];
-            
-            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($@"
-                Object.defineProperty(navigator, 'hardwareConcurrency', {{ get: () => {cores} }});
-                Object.defineProperty(navigator, 'deviceMemory', {{ get: () => {memory} }});
-                Object.defineProperty(navigator, 'platform', {{ get: () => '{platform}' }});
-            ");
-        }
-
-        private void LoadWindowSettings()
+private void LoadWindowSettings()
         {
             Width = Properties.Settings.Default.WindowWidth;
             Height = Properties.Settings.Default.WindowHeight;
