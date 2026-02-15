@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Toady Harvesters</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 20px; }
+        #grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .widget { background: #2a2a2a; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; }
+        .widget:hover { background: #333; }
+        .widget.expanded { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; z-index: 1000; cursor: default; }
+        .widget.expanded:hover { background: #2a2a2a; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: #dc3545; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: none; }
+        .widget.expanded .close-btn { display: block; }
+        .close-btn:hover { background: #c82333; }
+        .widget h2 { margin-bottom: 10px; font-size: 1.5em; }
+        .status { padding: 8px 12px; border-radius: 4px; display: inline-block; margin-bottom: 15px; font-weight: bold; }
+        .status.Harvesting { background: #28a745; }
+        .status.Stuck { background: #ffc107; color: #000; }
+        .status.Error { background: #dc3545; }
+        .status.Idle { background: #6c757d; }
+        .logs { background: #1a1a1a; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        .widget.expanded .logs { max-height: calc(100vh - 200px); }
+        .logs div { padding: 4px 0; border-bottom: 1px solid #333; }
+        .logs div:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <h1 style="margin-bottom: 20px;">AI Toady Harvesters</h1>
+    <div id="grid"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.0/dist/browser/signalr.min.js"></script>
+    <script>
+        const grid = document.getElementById('grid');
+        const harvesters = {};
+
+        async function init() {
+            const data = await fetch('/api/harvesters').then(r => r.json());
+            for (const [id, h] of Object.entries(data)) {
+                harvesters[id] = h;
+                createWidget(id);
+            }
+
+            const conn = new signalR.HubConnectionBuilder().withUrl('/hub').build();
+            conn.on('statusUpdate', (id, status) => {
+                if (!harvesters[id]) { harvesters[id] = { status: status, logs: [] }; createWidget(id); }
+                harvesters[id].status = status;
+                updateWidget(id);
+            });
+            conn.on('logUpdate', (id, msg) => {
+                if (!harvesters[id]) { harvesters[id] = { status: 'Unknown', logs: [] }; createWidget(id); }
+                harvesters[id].logs.unshift(msg);
+                if (harvesters[id].logs.length > 100) harvesters[id].logs.pop();
+                updateWidget(id);
+            });
+            await conn.start();
+        }
+
+        function createWidget(id) {
+            const widget = document.createElement('div');
+            widget.className = 'widget';
+            widget.id = `widget-${id}`;
+            widget.onclick = (e) => {
+                if (e.target.classList.contains('close-btn')) {
+                    widget.classList.remove('expanded');
+                } else if (e.target.closest('.widget') === widget) {
+                    widget.classList.toggle('expanded');
+                }
+            };
+            grid.appendChild(widget);
+            updateWidget(id);
+        }
+
+        function updateWidget(id) {
+            const h = harvesters[id];
+            const widget = document.getElementById(`widget-${id}`);
+            widget.innerHTML = `
+                <button class="close-btn">&times;</button>
+                <h2>${id}</h2>
+                <div class="status ${h.status}">${h.status}</div>
+                <div class="logs">${h.logs.map(l => `<div>${l}</div>`).join('')}</div>
+            `;
+        }
+
+        init();
+    </script>
+</body>
+</html>
