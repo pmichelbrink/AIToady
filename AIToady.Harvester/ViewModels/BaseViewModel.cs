@@ -291,6 +291,8 @@ namespace AIToady.Harvester.ViewModels
             if (!IsReadyToHarvest())
                 return;
 
+            _client = new HubClient($"{Environment.MachineName}-{SiteName}");
+
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
@@ -1006,8 +1008,6 @@ namespace AIToady.Harvester.ViewModels
         }
         public BaseViewModel()
         {
-            _client = new HubClient($"{Environment.MachineName}-{SiteName}");
-
             LoadSettings();
             GoCommand = new RelayCommand(() => ExecuteGo());
             NextCommand = new RelayCommand(ExecuteNext);
@@ -1205,9 +1205,9 @@ namespace AIToady.Harvester.ViewModels
         public async Task AddLogEntry(string message)
         {
             await Application.Current.Dispatcher.InvokeAsync(() =>
-                _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
+                _logEntries.Insert(0, new LogEntry { Log = message, Timestamp = DateTime.Now.ToString() }));
 
-            if (_isHubOnline)
+            if (_client != null && _isHubOnline)
             {
                 if (!await _client.UpdateStatus("Harvesting"))
                 {

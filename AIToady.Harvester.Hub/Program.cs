@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
@@ -17,13 +18,13 @@ app.MapPost("/api/harvester/{id}/status", (string id, StatusUpdate update, HubDa
     db.UpdateStatus(id, update.Status);
     hub.Clients.All.SendAsync("statusUpdate", id, update.Status);
 });
-app.MapPost("/api/harvester/{id}/log", (string id, LogEntry entry, HubDatabase db, IHubContext<HarvesterHub> hub) =>
+app.MapPost("/api/harvester/{id}/log", (string id, LogEntryRequest entry, HubDatabase db, IHubContext<HarvesterHub> hub) =>
 {
     db.AddLog(id, entry.Message);
-    hub.Clients.All.SendAsync("logUpdate", id, entry.Message);
+    hub.Clients.All.SendAsync("logUpdate", id, new { entry.Message, Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
 });
 app.MapGet("/api/harvesters", (HubDatabase db) => db.GetAll());
 app.Run();
 
 record StatusUpdate(string Status);
-record LogEntry(string Message);
+record LogEntryRequest(string Message);

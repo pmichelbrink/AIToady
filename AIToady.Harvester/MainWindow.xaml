@@ -365,7 +365,7 @@
                             </DataTemplate>
                         </GridViewColumn.HeaderTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Date" Width="150" DisplayMemberBinding="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}">
+                    <GridViewColumn Header="Date" Width="150" DisplayMemberBinding="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}">
                         <GridViewColumn.HeaderTemplate>
                             <DataTemplate>
                                 <Button Content="Date"

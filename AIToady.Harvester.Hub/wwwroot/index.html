@@ -21,7 +21,9 @@
         .status.Idle { background: #6c757d; }
         .logs { background: #1a1a1a; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
         .widget.expanded .logs { max-height: calc(100vh - 200px); }
-        .logs div { padding: 4px 0; border-bottom: 1px solid #333; }
+        .logs div { padding: 4px 0; border-bottom: 1px solid #333; display: flex; gap: 10px; }
+        .logs .timestamp { color: #888; min-width: 140px; }
+        .logs .message { flex: 1; }
         .logs div:last-child { border-bottom: none; }
     </style>
 </head>
@@ -46,9 +48,9 @@
                 harvesters[id].status = status;
                 updateWidget(id);
             });
-            conn.on('logUpdate', (id, msg) => {
+            conn.on('logUpdate', (id, logEntry) => {
                 if (!harvesters[id]) { harvesters[id] = { status: 'Unknown', logs: [] }; createWidget(id); }
-                harvesters[id].logs.unshift(msg);
+                harvesters[id].logs.unshift(logEntry);
                 if (harvesters[id].logs.length > 100) harvesters[id].logs.pop();
                 updateWidget(id);
             });
@@ -77,7 +79,7 @@
                 <button class="close-btn">&times;</button>
                 <h2>${id}</h2>
                 <div class="status ${h.status}">${h.status}</div>
-                <div class="logs">${h.logs.map(l => `<div>${l}</div>`).join('')}</div>
+                <div class="logs">${h.logs.map(l => `<div><span class="timestamp">${l.timestamp || l.Timestamp}</span><span class="message">${l.message || l.Message}</span></div>`).join('')}</div>
             `;
         }
 

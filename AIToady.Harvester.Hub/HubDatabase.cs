@@ -52,16 +52,16 @@ public class HubDatabase
         while (reader.Read())
         {
             var id = reader.GetString(0);
-            result[id] = new HarvesterData { Status = reader.GetString(1), Logs = new List<string>() };
+            result[id] = new HarvesterData { Status = reader.GetString(1), Logs = new List<LogEntry>() };
         }
 
         foreach (var id in result.Keys)
         {
-            var logCmd = new SqliteCommand("SELECT message FROM logs WHERE harvester_id = @id ORDER BY timestamp DESC LIMIT 100", conn);
+            var logCmd = new SqliteCommand("SELECT message, timestamp FROM logs WHERE harvester_id = @id ORDER BY timestamp DESC LIMIT 100", conn);
             logCmd.Parameters.AddWithValue("@id", id);
             using var logReader = logCmd.ExecuteReader();
             while (logReader.Read())
-                result[id].Logs.Add(logReader.GetString(0));
+                result[id].Logs.Add(new LogEntry { Message = logReader.GetString(0), Timestamp = logReader.GetString(1) });
         }
 
         return result;
@@ -71,5 +71,12 @@ public class HubDatabase
 public class HarvesterData
 {
     public string Status { get; set; }
-    public List<string> Logs { get; set; }
+    public List<LogEntry> Logs { get; set; }
+}
+
+public class LogEntry
+{
+    public string Message { get; set; }
+    public string Timestamp { get; set; }
+    public string Log { get; set; }
 }
