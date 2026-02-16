@@ -3,6 +3,14 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 
+public enum HarvesterStatus
+{
+    Harvesting,
+    Idle,
+    Stuck,
+    Error
+}
+
 public class HubClient
 {
     private readonly HttpClient _http;
@@ -18,11 +26,11 @@ public class HubClient
         _id = harvesterId;
     }
 
-    public async Task<bool> UpdateStatus(string status)
+    public async Task<bool> UpdateStatus(HarvesterStatus status)
     {
         try 
         { 
-            await _http.PostAsJsonAsync($"/api/harvester/{_id}/status", new { Status = status });
+            await _http.PostAsJsonAsync($"/api/harvester/{_id}/status", new { Status = status.ToString() });
             return true;
         }
         catch { return false; }
@@ -40,8 +48,8 @@ public class HubClient
 }
 
 // Example usage:
-// var client = new HarvesterClient("Harvester-1");
-// if (!await client.UpdateStatus("Harvesting"))
+// var client = new HubClient("Harvester-1");
+// if (!await client.UpdateStatus(HarvesterStatus.Harvesting))
 // {
 //     // Hub is not available - stop trying
 //     return;

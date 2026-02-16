@@ -1075,7 +1075,7 @@ namespace AIToady.Harvester.ViewModels
         public void InitializeTimer()
         {
             _timer = new System.Timers.Timer(1800000); // Check every half hour
-            _timer.Elapsed += (s, e) => RunTimerOperations();
+            _timer.Elapsed += async (s, e) => await RunTimerOperations();
             _timer.Start();
         }
         public bool IsWithinOperatingHours()
@@ -1089,15 +1089,15 @@ namespace AIToady.Harvester.ViewModels
             var currentTime = DateTime.Now.TimeOfDay;
             return currentTime >= startTime && currentTime <= endTime;
         }
-        public void RunTimerOperations()
+        public async Task RunTimerOperations()
         {
             _isHubOnline = true;
 
-            //if (!await _client.UpdateStatus("Harvesting"))
-            //{
-            //    _isHubOnline = false;
-            //    AddLogEntry("Hub is not available - stop trying until next timer interval.");
-            //}
+            if (!await _client.UpdateStatus(HarvesterStatus.Harvesting))
+            {
+                _isHubOnline = false;
+                AddLogEntry("Hub is not available - stop trying until next timer interval.");
+            }
 
             if ((DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
@@ -1105,7 +1105,7 @@ namespace AIToady.Harvester.ViewModels
                     $"Harvesting Stalled on {Environment.MachineName}", 
                     $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}"));
 
-                AddLogEntry($"Harvesting Stalled! HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}");
+                await AddLogEntry($"Harvesting Stalled! HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}", HarvesterStatus.Stuck);
                 _lastHarvestPageCall = DateTime.Now;
             }
 
@@ -1130,39 +1130,27 @@ namespace AIToady.Harvester.ViewModels
                 StopAfterCurrentPage = false;
             }
         }
-        public async Task AddLogEntry(string message, bool isError = false)
+        public async Task AddLogEntry(string message, HarvesterStatus status = HarvesterStatus.Harvesting)
         {
             await Application.Current.Dispatcher.InvokeAsync(() =>
                 _logEntries.Insert(0, new LogEntry { Log = message, Timestamp = DateTime.Now.ToString() }));
 
             if (_client != null && _isHubOnline)
             {
-                if (isError)
-                    await _client.UpdateStatus("Error");
+                if (status != HarvesterStatus.Harvesting)
+                    await _client.UpdateStatus(status);
 
-                if (!await _client.UpdateStatus("Harvesting"))
-                {
-                    _isHubOnline = false;
-                    AddLogEntry("Hub is not available - stop trying until next timer interval.");
-                }
-                else
-                {
-                    await _client.Log(message);
-                }
+                await _client.Log(message);
             }
 
-            // Write to log file if forum folder exists
-            if (!string.IsNullOrEmpty(ForumName) && !string.IsNullOrEmpty(SiteName))
+            try
             {
-                try
-                {
-                    string forumFolder = Path.Combine(_rootFolder, SiteName);
-                    Directory.CreateDirectory(forumFolder);
-                    string logFile = Path.Combine(forumFolder, "harvest.log");
-                    await File.AppendAllTextAsync(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
-                }
-                catch { }
+                string forumFolder = Path.Combine(_rootFolder, SiteName);
+                Directory.CreateDirectory(forumFolder);
+                string logFile = Path.Combine(forumFolder, "harvest.log");
+                await File.AppendAllTextAsync(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
             }
+            catch { }
         }
         public async Task WriteThreadInfo(ForumThread thread)
         {
