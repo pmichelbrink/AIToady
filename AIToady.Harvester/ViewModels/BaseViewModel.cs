@@ -1171,6 +1171,8 @@ namespace AIToady.Harvester.ViewModels
 
         public void RunTimerOperations()
         {
+            _isHubOnline = true;
+
             if ((DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
                 Task.Run(async () => await _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
@@ -1209,8 +1211,12 @@ namespace AIToady.Harvester.ViewModels
             {
                 if (!await _client.UpdateStatus("Harvesting"))
                 {
-                    // Hub is not available - stop trying
                     _isHubOnline = false;
+                    AddLogEntry("Hub is not available - stop trying until next timer interval.");
+                }
+                else
+                {
+                    await _client.Log(message);
                 }
             }
 
