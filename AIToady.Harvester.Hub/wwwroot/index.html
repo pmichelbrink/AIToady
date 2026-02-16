@@ -11,8 +11,10 @@
         .widget.expanded { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; z-index: 1000; cursor: default; }
         .widget.expanded:hover { background: #2a2a2a; }
         .close-btn { position: absolute; top: 20px; right: 20px; background: #dc3545; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: none; }
-        .widget.expanded .close-btn { display: block; }
+        .delete-btn { position: absolute; top: 20px; right: 70px; background: #6c757d; border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: none; }
+        .widget.expanded .close-btn, .widget.expanded .delete-btn { display: block; }
         .close-btn:hover { background: #c82333; }
+        .delete-btn:hover { background: #5a6268; }
         .widget h2 { margin-bottom: 10px; font-size: 1.5em; }
         .status { padding: 8px 12px; border-radius: 4px; display: inline-block; margin-bottom: 15px; font-weight: bold; }
         .status.Harvesting { background: #28a745; }
@@ -54,6 +56,11 @@
                 if (harvesters[id].logs.length > 100) harvesters[id].logs.pop();
                 updateWidget(id);
             });
+            conn.on('harvesterDeleted', (id) => {
+                const widget = document.getElementById(`widget-${id}`);
+                if (widget) widget.remove();
+                delete harvesters[id];
+            });
             await conn.start();
         }
 
@@ -64,6 +71,10 @@
             widget.onclick = (e) => {
                 if (e.target.classList.contains('close-btn')) {
                     widget.classList.remove('expanded');
+                } else if (e.target.classList.contains('delete-btn')) {
+                    if (confirm(`Delete ${id}?`)) {
+                        fetch(`/api/harvester/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    }
                 } else if (e.target.closest('.widget') === widget) {
                     widget.classList.toggle('expanded');
                 }
@@ -77,6 +88,7 @@
             const widget = document.getElementById(`widget-${id}`);
             widget.innerHTML = `
                 <button class="close-btn">&times;</button>
+                <button class="delete-btn">&#128465;</button>
                 <h2>${id}</h2>
                 <div class="status ${h.status}">${h.status}</div>
                 <div class="logs">${h.logs.map(l => `<div><span class="timestamp">${l.timestamp || l.Timestamp}</span><span class="message">${l.message || l.Message}</span></div>`).join('')}</div>

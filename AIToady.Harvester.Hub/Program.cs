@@ -24,6 +24,11 @@ app.MapPost("/api/harvester/{id}/log", (string id, LogEntryRequest entry, HubDat
     hub.Clients.All.SendAsync("logUpdate", id, new { entry.Message, Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
 });
 app.MapGet("/api/harvesters", (HubDatabase db) => db.GetAll());
+app.MapDelete("/api/harvester/{id}", (string id, HubDatabase db, IHubContext<HarvesterHub> hub) =>
+{
+    db.Delete(id);
+    hub.Clients.All.SendAsync("harvesterDeleted", id);
+});
 app.Run();
 
 record StatusUpdate(string Status);

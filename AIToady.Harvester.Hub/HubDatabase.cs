@@ -66,6 +66,14 @@ public class HubDatabase
 
         return result;
     }
+
+    public void Delete(string id)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        new SqliteCommand("DELETE FROM harvesters WHERE id = @id", conn) { Parameters = { new("@id", id) } }.ExecuteNonQuery();
+        new SqliteCommand("DELETE FROM logs WHERE harvester_id = @id", conn) { Parameters = { new("@id", id) } }.ExecuteNonQuery();
+    }
 }
 
 public class HarvesterData
