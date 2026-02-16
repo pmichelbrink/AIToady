@@ -1,6 +1,6 @@
 public class SampleDataSeeder
 {
-    public static void Seed(HarvesterDb db)
+    public static void Seed(HubDatabase db)
     {
         var harvesters = new[] { "Harvester-1", "Harvester-2", "Harvester-3", "Harvester-4" };
         var statuses = new[] { "Harvesting", "Stuck", "Error", "Idle" };

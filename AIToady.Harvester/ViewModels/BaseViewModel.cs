@@ -75,6 +75,9 @@ namespace AIToady.Harvester.ViewModels
         public event Func<Task> ClearCacheRequested;
         public event Action<string> SetDownloadFolderRequested;
         EmailService _emailService;
+        private bool _isHubOnline = true;
+        HubClient _client;
+
         protected virtual bool IsBoardPage(string url) { return false; }
         protected virtual async Task LoadForumLinksFromBoard() { }
         protected virtual async Task<bool> CheckIfNextPageExists(int count) { return false; }
@@ -1003,6 +1006,8 @@ namespace AIToady.Harvester.ViewModels
         }
         public BaseViewModel()
         {
+            _client = new HubClient($"{Environment.MachineName}-{SiteName}");
+
             LoadSettings();
             GoCommand = new RelayCommand(() => ExecuteGo());
             NextCommand = new RelayCommand(ExecuteNext);
@@ -1040,7 +1045,7 @@ namespace AIToady.Harvester.ViewModels
             }
             catch (Exception ex)
             {
-                AddLogEntry($"{ShowScheduledForumsToast}: {ex.Message}");
+                _ = AddLogEntry($"{nameof(ShowScheduledForumsToast)}: {ex.Message}");
             }
         }
         public int GetRandomizedDelay()
@@ -1100,7 +1105,7 @@ namespace AIToady.Harvester.ViewModels
                     var domains = File.ReadAllLines(badDomainsFile);
                     foreach (var domain in domains)
                         _badDomains.Add(domain);
-                    AddLogEntry($"Loaded {_badDomains.Count} bad domains from file");
+                    _ = AddLogEntry($"Loaded {_badDomains.Count} bad domains from file");
                 }
             }
             catch { }
@@ -1195,10 +1200,19 @@ namespace AIToady.Harvester.ViewModels
                 StopAfterCurrentPage = false;
             }
         }
-        public void AddLogEntry(string message)
+        public async Task AddLogEntry(string message)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
                 _logEntries.Insert(0, new LogEntry { Log = message, Date = DateTime.Now }));
+
+            if (_isHubOnline)
+            {
+                if (!await _client.UpdateStatus("Harvesting"))
+                {
+                    // Hub is not available - stop trying
+                    _isHubOnline = false;
+                }
+            }
 
             // Write to log file if forum folder exists
             if (!string.IsNullOrEmpty(ForumName) && !string.IsNullOrEmpty(SiteName))
@@ -1208,7 +1222,7 @@ namespace AIToady.Harvester.ViewModels
                     string forumFolder = Path.Combine(_rootFolder, SiteName);
                     Directory.CreateDirectory(forumFolder);
                     string logFile = Path.Combine(forumFolder, "harvest.log");
-                    File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
+                    await File.AppendAllTextAsync(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}\n");
                 }
                 catch { }
             }
@@ -1448,8 +1462,8 @@ namespace AIToady.Harvester.ViewModels
         private void InitializeConnectionMonitor()
         {
             _connectionMonitor = new ConnectionMonitor();
-            _connectionMonitor.ConnectionLost += () => AddLogEntry("Connection lost - harvesting will pause");
-            _connectionMonitor.ConnectionRestored += () => AddLogEntry("Connection restored");
+            _connectionMonitor.ConnectionLost += async () => await AddLogEntry("Connection lost - harvesting will pause");
+            _connectionMonitor.ConnectionRestored += async () => await AddLogEntry("Connection restored");
             _connectionMonitor.Start();
         }
 

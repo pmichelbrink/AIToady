@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AIToady.Harvester.Hub\AIToady.Harvester.Hub.csproj" />
     <ProjectReference Include="..\AIToady.Infrastructure\AIToady.Infrastructure.csproj" />
   </ItemGroup>
 

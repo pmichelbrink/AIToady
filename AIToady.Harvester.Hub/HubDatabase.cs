@@ -3,11 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-public class HarvesterDb
+public class HubDatabase
 {
     private readonly string _connectionString;
 
-    public HarvesterDb()
+    public HubDatabase()
     {
         var dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AIToady", "harvesters.db");
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
