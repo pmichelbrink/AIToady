@@ -82,22 +82,18 @@ namespace AIToady.Harvester.ViewModels
         protected virtual async Task LoadForumLinksFromBoard() { }
         protected virtual async Task<bool> CheckIfNextPageExists(int count) { return false; }
         protected virtual async Task<List<ForumMessage>> HarvestPage() { return new List<ForumMessage>(); }
+        protected virtual async Task ExtractForumName(bool skipCategoryPrompt = false) { }
         protected void InvokeNavigateRequested(string url) => NavigateRequested?.Invoke(url);
         protected async Task<string> InvokeExecuteScriptRequested(string script) => await ExecuteScriptRequested?.Invoke(script);
         protected async Task<string> PromptUserInput(string prompt) => await PromptUserInputRequested?.Invoke(prompt) ?? string.Empty;
-        protected static string GetDriveWithMostFreeSpace()
-        {
-            return DriveInfo.GetDrives()
-                .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
-                .OrderByDescending(d => d.AvailableFreeSpace)
-                .FirstOrDefault()?.Name ?? "C:\\";
-        }
+
+        public ObservableCollection<LogEntry> LogEntries => _logEntries;
+        public ObservableCollection<string> ScheduledForums => _scheduledForums;
         public string SiteName
         {
             get => _siteName;
             set => SetProperty(ref _siteName, value);
         }
-
         public string ForumName
         {
             get => _forumName;
@@ -108,13 +104,11 @@ namespace AIToady.Harvester.ViewModels
             get => _messageElement;
             set => SetProperty(ref _messageElement, value);
         }
-
         public string ImageElement
         {
             get => _imageElement;
             set => SetProperty(ref _imageElement, value);
         }
-
         public string AttachmentElement
         {
             get => _attachmentElement;
@@ -125,145 +119,149 @@ namespace AIToady.Harvester.ViewModels
             get => _url;
             set => SetProperty(ref _url, value);
         }
-
         public string NextElement
         {
             get => _nextElement;
             set => SetProperty(ref _nextElement, value);
         }
-
         public string ThreadElement
         {
             get => _threadElement;
             set => SetProperty(ref _threadElement, value);
         }
-
-        public ObservableCollection<LogEntry> LogEntries => _logEntries;
-
         public int ThreadsToSkip
         {
             get => _threadsToSkip;
             set => SetProperty(ref _threadsToSkip, value);
         }
-
         public int MessagesPerPage
         {
             get => _messagesPerPage;
             set => SetProperty(ref _messagesPerPage, value < 1 ? 1 : value);
         }
-
         public int PageLoadDelay
         {
             get => _pageLoadDelay;
             set => SetProperty(ref _pageLoadDelay, value);
         }
-
         public string RootFolder
         {
             get => _rootFolder;
             set => SetProperty(ref _rootFolder, value);
         }
-
         public string StartTime
         {
             get => _startTime;
             set => SetProperty(ref _startTime, value);
         }
-
         public string EndTime
         {
             get => _endTime;
             set => SetProperty(ref _endTime, value);
         }
-
         public string HarvestingButtonText
         {
             get => _harvestingButtonText;
             set => SetProperty(ref _harvestingButtonText, value);
         }
-
         public bool IsHarvesting
         {
             get => _isHarvesting;
             set => SetProperty(ref _isHarvesting, value);
         }
-
         public bool IsCapturingElement
         {
             get => _isCapturingElement;
             set => SetProperty(ref _isCapturingElement, value);
         }
-
         public bool StopAfterCurrentPage
         {
             get => _stopAfterCurrentPage;
             set => SetProperty(ref _stopAfterCurrentPage, value);
         }
-
         public bool SkipExistingThreads
         {
             get => _skipExistingThreads;
             set => SetProperty(ref _skipExistingThreads, value);
         }
-
         public bool HoursOfOperationEnabled
         {
             get => _hoursOfOperationEnabled;
             set => SetProperty(ref _hoursOfOperationEnabled, value);
         }
-
         public bool DarkMode
         {
             get => _darkMode;
             set => SetProperty(ref _darkMode, value);
         }
-
         public bool InPrivateMode
         {
             get => _inPrivateMode;
             set => SetProperty(ref _inPrivateMode, value);
         }
-
         public bool SkipImages
         {
             get => _skipImages;
             set => SetProperty(ref _skipImages, value);
         }
 
-        public ObservableCollection<string> ScheduledForums => _scheduledForums;
-
         public List<ThreadInfo> ThreadInfos => _threadInfos;
-
         public string EmailAccount
         {
             get => _emailAccount;
             set => SetProperty(ref _emailAccount, value);
         }
-
         public string EmailPassword
         {
             get => _emailPassword;
             set => SetProperty(ref _emailPassword, value);
         }
-
         public string Category
         {
             get => _category;
             set => SetProperty(ref _category, value);
         }
-
         public DateTime? HarvestSince
         {
             get => _harvestSince;
             set => SetProperty(ref _harvestSince, value);
         }
-
         public ICommand GoCommand { get; protected set; }
         public ICommand NextCommand { get; protected set; }
         public ICommand LoadThreadsCommand { get; protected set; }
         public ICommand StartHarvestingCommand { get; protected set; }
         public ICommand ScheduleCommand { get; protected set; }
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        {
+            if (Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            CommandManager.InvalidateRequerySuggested();
+            return true;
+        }
+        public BaseViewModel()
+        {
+            LoadSettings();
+            GoCommand = new RelayCommand(() => ExecuteGo());
+            NextCommand = new RelayCommand(ExecuteNext);
+            StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadInfos.Count > 0);
+            ScheduleCommand = new RelayCommand(ExecuteSchedule);
 
+            InitializeTimer();
+            InitializeConnectionMonitor();
+        }
+        protected static string GetDriveWithMostFreeSpace()
+        {
+            return DriveInfo.GetDrives()
+                .Where(d => d.IsReady && d.DriveType == DriveType.Fixed)
+                .OrderByDescending(d => d.AvailableFreeSpace)
+                .FirstOrDefault()?.Name ?? "C:\\";
+        }
         public async Task<bool> TestEmail()
         {
             try
@@ -277,15 +275,6 @@ namespace AIToady.Harvester.ViewModels
                 return false;
             }
         }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-
         public async void ExecuteStartHarvesting()
         {
             if (!IsReadyToHarvest())
@@ -377,7 +366,6 @@ namespace AIToady.Harvester.ViewModels
                 }
             }
         }
-
         private async Task StartNextForum(bool skipCategoryPrompt = true)
         {
             var nextForum = _scheduledForums.First();
@@ -393,7 +381,6 @@ namespace AIToady.Harvester.ViewModels
             _isHarvesting = false;
             ExecuteStartHarvesting();
         }
-
         private bool IsReadyToHarvest()
         {
             if (_isHarvesting)
@@ -431,7 +418,6 @@ namespace AIToady.Harvester.ViewModels
 
             return true;
         }
-
         private async Task CheckInternetConnection()
         {
             while (_isHarvesting && !_connectionMonitor.IsConnected)
@@ -450,14 +436,12 @@ namespace AIToady.Harvester.ViewModels
                 AddLogEntry("Internet connection restored - resuming harvesting");
             }
         }
-
         private void StopHarvesting()
         {
             _isHarvesting = false;
             HarvestingButtonText = "Start Harvesting";
             MessageBox.Show(Application.Current.MainWindow, $"Harvesting complete.", "Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
         protected async Task<ForumThread> HarvestThread(string threadUrl)
         {
             _threadPageNumber = 1;
@@ -529,7 +513,6 @@ namespace AIToady.Harvester.ViewModels
                     _threadPageNumber++;
                     try
                     {
-                        //await InvokeExecuteScriptRequested($"document.querySelector('{NextElement}').click();");
                         await Task.Delay(GetRandomizedDelay());
                     }
                     catch (TaskCanceledException)
@@ -546,7 +529,6 @@ namespace AIToady.Harvester.ViewModels
 
             return thread;
         }
-
         private string GetThreadFolder()
         {
             string threadFolder = Path.Combine(_rootFolder, SiteName);
@@ -557,7 +539,6 @@ namespace AIToady.Harvester.ViewModels
             threadFolder = Path.Combine(threadFolder, ForumName, _threadName);
             return threadFolder.Replace("/", "_");
         }
-
         protected virtual async Task<string> GetThreadName(string threadUrl)
         {
             // Get thread name from page title
@@ -581,30 +562,10 @@ namespace AIToady.Harvester.ViewModels
 
             return _threadName;
         }
-
-        private async Task<bool> LoadNextAKForumsPage()
-        {
-            string akNextScript = @"
-                        (function() {
-                            let nextButton = document.querySelector('.pageNav-jump--next[aria-disabled=""false""]');
-                            if (nextButton) {
-                                nextButton.click();
-                                return 'clicked';
-                            }
-                            return 'not_found';
-                        })()
-                    ";
-            string akNextResult = await InvokeExecuteScriptRequested(akNextScript);
-            akNextResult = JsonSerializer.Deserialize<string>(akNextResult);
-            return akNextResult == "clicked";
-        }
-
         protected virtual async Task<bool> LoadNextForumPage()
         {
             return await CheckIfNextPageExists(999);
         }
-        protected virtual async Task ExtractForumName(bool skipCategoryPrompt = false) { }
-
         public virtual async Task ExecuteGo(bool skipCategoryPrompt = false)
         {
             if (string.IsNullOrEmpty(Url))
@@ -635,8 +596,6 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("nosler"))
             {
                 SiteName = "Nosler";
-                //ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
-                //return;
             }
             else if (uri.Host.Contains("glocktalk") && GetType() != typeof(GlockTalkViewModel))
             {
@@ -674,7 +633,6 @@ namespace AIToady.Harvester.ViewModels
                 await ExtractForumName(skipCategoryPrompt);
             }
         }
-
         public async void ExecuteNext()
         {
             if (!string.IsNullOrEmpty(NextElement))
@@ -682,7 +640,6 @@ namespace AIToady.Harvester.ViewModels
                 await ExecuteScriptRequested?.Invoke($"document.querySelector('{NextElement}').click();");
             }
         }
-
         public virtual async Task ExecuteLoadThreads()
         {
             try
@@ -791,7 +748,6 @@ namespace AIToady.Harvester.ViewModels
 
             foreach (var message in pageMessages)
             {
-                // Process images
                 var imageNames = new List<string>();
                 for (int i = 0; i < message.Images.Count; i++)
                 {
@@ -851,12 +807,6 @@ namespace AIToady.Harvester.ViewModels
                         if (IsUrlFromBadDomain(imageUrl))
                             continue;
 
-                        //if (imageUrl.Contains("photobucket.com"))
-                        //{
-                        //    AddLogEntry($"Skipping photobucket.com image {imageUrl}");
-                        //    continue;
-                        //}
-
                         if (imageUrl.Contains("imgur.com/a/"))
                         {
                             AddLogEntry($"Processing imgur album: {imageUrl}");
@@ -911,7 +861,6 @@ namespace AIToady.Harvester.ViewModels
                         else
                         {
                             AddLogEntry($"{result} - {imageUrl}");
-                            //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Image Error on " + Environment.MachineName, "Body");
                         }
                     }
                     catch (TaskCanceledException)
@@ -965,7 +914,6 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            //_emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Attachment Download Failed for " + fileName, "Attachment download failed for " + fileName);
                             AddLogEntry($"Attachment download failed for {fileName}");
                         }
                     }
@@ -983,7 +931,6 @@ namespace AIToady.Harvester.ViewModels
 
             thread.Messages.AddRange(pageMessages);
         }
-
         private void CheckForFlickrAlbumImages(string imagesFolder, List<string> imageNames, string imagePath)
         {
             string baseFileName = Path.GetFileNameWithoutExtension(imagePath);
@@ -997,27 +944,6 @@ namespace AIToady.Harvester.ViewModels
                 albumImagePath = Path.Combine(imagesFolder, $"{baseFileName}_{albumIndex}{Path.GetExtension(imagePath)}");
             }
         }
-
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-        {
-            if (Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            CommandManager.InvalidateRequerySuggested();
-            return true;
-        }
-        public BaseViewModel()
-        {
-            LoadSettings();
-            GoCommand = new RelayCommand(() => ExecuteGo());
-            NextCommand = new RelayCommand(ExecuteNext);
-            StartHarvestingCommand = new RelayCommand(() => ExecuteStartHarvesting(), () => !_isHarvesting || _threadInfos.Count > 0);
-            ScheduleCommand = new RelayCommand(ExecuteSchedule);
-
-            InitializeTimer();
-            InitializeConnectionMonitor();
-        }
-
         public void ExecuteSchedule()
         {
             if (Utilities.IsValidForumUrl(Url) && !_scheduledForums.Contains(Url))
@@ -1027,7 +953,6 @@ namespace AIToady.Harvester.ViewModels
                 ShowScheduledForumsToast();
             }
         }
-
         private void ShowScheduledForumsToast()
         {
             try
@@ -1053,7 +978,6 @@ namespace AIToady.Harvester.ViewModels
             int delay = _random.Next(PageLoadDelay, PageLoadDelay * 2 + 1) * 700;
             return delay;
         }
-
         public void SaveSettings()
         {
             SaveBadDomains();
@@ -1084,7 +1008,6 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
             Properties.Settings.Default.Save();
         }
-
         public void SaveBadDomains()
         {
             try
@@ -1094,7 +1017,6 @@ namespace AIToady.Harvester.ViewModels
             }
             catch { }
         }
-
         public void LoadBadDomains()
         {
             try
@@ -1156,7 +1078,6 @@ namespace AIToady.Harvester.ViewModels
             _timer.Elapsed += (s, e) => RunTimerOperations();
             _timer.Start();
         }
-
         public bool IsWithinOperatingHours()
         {
             if (!HoursOfOperationEnabled)
@@ -1168,16 +1089,23 @@ namespace AIToady.Harvester.ViewModels
             var currentTime = DateTime.Now.TimeOfDay;
             return currentTime >= startTime && currentTime <= endTime;
         }
-
         public void RunTimerOperations()
         {
             _isHubOnline = true;
+
+            //if (!await _client.UpdateStatus("Harvesting"))
+            //{
+            //    _isHubOnline = false;
+            //    AddLogEntry("Hub is not available - stop trying until next timer interval.");
+            //}
 
             if ((DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
                 Task.Run(async () => await _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
                     $"Harvesting Stalled on {Environment.MachineName}", 
                     $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}"));
+
+                AddLogEntry($"Harvesting Stalled! HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}");
                 _lastHarvestPageCall = DateTime.Now;
             }
 
@@ -1202,13 +1130,16 @@ namespace AIToady.Harvester.ViewModels
                 StopAfterCurrentPage = false;
             }
         }
-        public async Task AddLogEntry(string message)
+        public async Task AddLogEntry(string message, bool isError = false)
         {
             await Application.Current.Dispatcher.InvokeAsync(() =>
                 _logEntries.Insert(0, new LogEntry { Log = message, Timestamp = DateTime.Now.ToString() }));
 
             if (_client != null && _isHubOnline)
             {
+                if (isError)
+                    await _client.UpdateStatus("Error");
+
                 if (!await _client.UpdateStatus("Harvesting"))
                 {
                     _isHubOnline = false;
@@ -1233,7 +1164,6 @@ namespace AIToady.Harvester.ViewModels
                 catch { }
             }
         }
-
         public async Task WriteThreadInfo(ForumThread thread)
         {
             if (thread != null)
@@ -1273,7 +1203,6 @@ namespace AIToady.Harvester.ViewModels
             }
             catch { return false; }
         }
-
         public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
         {
             // Handle file.php?id= URLs
@@ -1365,7 +1294,6 @@ namespace AIToady.Harvester.ViewModels
 
             return fileName;
         }
-
         private async Task<List<string>> ProcessImgurAlbum(string albumUrl, string imagesFolder)
         {
             var albumImages = new List<string>();
@@ -1420,7 +1348,6 @@ namespace AIToady.Harvester.ViewModels
             }
             return albumImages;
         }
-
         public void HandleElementCapture(string result, bool isThreadElement)
         {
             if (isThreadElement && result.Contains("."))
@@ -1436,7 +1363,6 @@ namespace AIToady.Harvester.ViewModels
         }
         [System.Runtime.InteropServices.DllImport("shell32.dll")]
         static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
-
         public T CloneToViewModel<T>() where T : BaseViewModel, new()
         {               
             // Set AppUserModelID (required for non-UWP apps)
@@ -1464,7 +1390,6 @@ namespace AIToady.Harvester.ViewModels
             newViewModel._category = _category;
             return newViewModel;
         }
-
         private void InitializeConnectionMonitor()
         {
             _connectionMonitor = new ConnectionMonitor();
@@ -1472,7 +1397,6 @@ namespace AIToady.Harvester.ViewModels
             _connectionMonitor.ConnectionRestored += async () => await AddLogEntry("Connection restored");
             _connectionMonitor.Start();
         }
-
         public void Dispose()
         {
             _timer?.Stop();

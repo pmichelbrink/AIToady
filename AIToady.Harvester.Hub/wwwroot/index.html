@@ -15,8 +15,8 @@
         .widget.expanded .close-btn, .widget.expanded .delete-btn { display: block; }
         .close-btn:hover { background: #c82333; }
         .delete-btn:hover { background: #5a6268; }
-        .widget h2 { margin-bottom: 10px; font-size: 1.5em; }
-        .status { padding: 8px 12px; border-radius: 4px; display: inline-block; margin-bottom: 15px; font-weight: bold; }
+        .widget h2 { margin-bottom: 10px; font-size: 1.5em; display: inline-block; margin-right: 10px; vertical-align: middle; }
+        .status { padding: 8px 12px; border-radius: 4px; display: inline-block; margin-bottom: 15px; font-weight: bold; vertical-align: middle; }
         .status.Harvesting { background: #28a745; }
         .status.Stuck { background: #ffc107; color: #000; }
         .status.Error { background: #dc3545; }
@@ -91,6 +91,7 @@
                 <button class="delete-btn">&#128465;</button>
                 <h2>${id}</h2>
                 <div class="status ${h.status}">${h.status}</div>
+                <br>
                 <div class="logs">${h.logs.map(l => `<div><span class="timestamp">${l.timestamp || l.Timestamp}</span><span class="message">${l.message || l.Message}</span></div>`).join('')}</div>
             `;
         }
