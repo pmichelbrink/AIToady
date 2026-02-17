@@ -499,7 +499,7 @@ namespace AIToady.Harvester.ViewModels
                     else
                     {
                         // Some forums include the first post on every page
-                        if (pageMessages[0].PostId == firstPostId)
+                        if (!string.IsNullOrEmpty(firstPostId) && pageMessages[0].PostId == firstPostId)
                             pageMessages.RemoveAt(0);
                     }
                 }
@@ -605,6 +605,12 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("nosler"))
             {
                 SiteName = "Nosler";
+            }
+            else if (uri.Host.Contains("accuratereloading") && GetType() != typeof(AccurateReloadingViewModel))
+            {
+                SiteName = "Accurate Reloading";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.AccurateReloading);
+                return;
             }
             else if (uri.Host.Contains("glocktalk") && GetType() != typeof(GlockTalkViewModel))
             {
