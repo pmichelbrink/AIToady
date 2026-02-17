@@ -606,6 +606,12 @@ namespace AIToady.Harvester.ViewModels
             {
                 SiteName = "Nosler";
             }
+            else if (uri.Host.Contains("gbo") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Graybeard Outdoors";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
             else if (uri.Host.Contains("accuratereloading") && GetType() != typeof(AccurateReloadingViewModel))
             {
                 SiteName = "Accurate Reloading";
