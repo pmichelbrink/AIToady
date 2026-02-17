@@ -1006,7 +1006,7 @@ namespace AIToady.Harvester.ViewModels
             Properties.Settings.Default.HarvestSince = HarvestSince?.ToString("o") ?? "";
             Properties.Settings.Default.SkipImages = SkipImages;
             Properties.Settings.Default.ScheduleForums = string.Join("|", _scheduledForums);
-            Properties.Settings.Default.Save();
+            SettingsManager.Save();
         }
         public void SaveBadDomains()
         {
@@ -1034,6 +1034,7 @@ namespace AIToady.Harvester.ViewModels
         }
         public void LoadSettings()
         {
+            SettingsManager.Load();
             LoadBadDomains();
 
             var savedUrl = Properties.Settings.Default.Url;

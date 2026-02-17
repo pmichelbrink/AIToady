@@ -144,7 +144,7 @@ private void LoadWindowSettings()
             Properties.Settings.Default.WindowHeight = Height;
             Properties.Settings.Default.WindowLeft = Left;
             Properties.Settings.Default.WindowTop = Top;
-            Properties.Settings.Default.Save();
+            SettingsManager.Save();
 
             _viewModel.SaveSettings();
             _viewModel.Dispose();
