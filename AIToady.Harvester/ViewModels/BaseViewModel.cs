@@ -13,6 +13,7 @@ namespace AIToady.Harvester.ViewModels
 {
     public class BaseViewModel : INotifyPropertyChanged
     {
+        protected string _harvesterName = Environment.MachineName;
         protected string _siteName = "";
         protected string _forumName = "";
         protected string _messageElement = "";
@@ -267,7 +268,7 @@ namespace AIToady.Harvester.ViewModels
             try
             {
                 var emailService = new EmailService(EmailAccount, EmailPassword);
-                await emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Test Email", "This is a test email from AIToady Harvester.");
+                await emailService.SendEmailAsync(_harvesterName + "@AIToady.com", "Test Email", "This is a test email from AIToady Harvester.");
                 return true;
             }
             catch
@@ -280,7 +281,8 @@ namespace AIToady.Harvester.ViewModels
             if (!IsReadyToHarvest())
                 return;
 
-            _client = new HubClient($"{Environment.MachineName}-{SiteName}");
+            _harvesterName = $"{Environment.MachineName}-{SiteName}";
+            _client = new HubClient(_harvesterName);
 
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
@@ -342,7 +344,7 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", "Forum Extraction Complete on " + Environment.MachineName, "Body");
+                    //await _emailService.SendEmailAsync(_harvesterName + "@AIToady.com", "Forum Extraction Complete on " + _harvesterName, "Body");
                     //System.Media.SystemSounds.Beep.Play();
                 }
 
@@ -371,7 +373,7 @@ namespace AIToady.Harvester.ViewModels
             var nextForum = _scheduledForums.First();
             _scheduledForums.RemoveAt(0);
             AddLogEntry($"Loading next scheduled forum: {nextForum}");
-            //await _emailService.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
+            //await _emailService.SendEmailAsync(_harvesterName + "@AIToady.com", $"Starting next scheduled forum: {nextForum}", "Body");
             if (Utilities.IsValidForumUrl(nextForum))
                 Url = nextForum;
 
@@ -453,6 +455,13 @@ namespace AIToady.Harvester.ViewModels
             var thread = new ForumThread();
 
             _threadName = await GetThreadName(threadUrl);
+
+            if (_threadName.Contains("Too Many Requests"))
+            {
+                AddLogEntry("Too Many Requests message encountered, sleeping for an hour.", HarvesterStatus.Idle);
+                await Task.Delay(600000);
+            }
+
             thread.ThreadName = _threadName;
 
             string threadFolder = GetThreadFolder();
@@ -497,7 +506,7 @@ namespace AIToady.Harvester.ViewModels
                 else
                 {
                     AddLogEntry($"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}");
-                    _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", $"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}", "");
+                    _emailService?.SendEmailAsync(_harvesterName + "@AIToady.com", $"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}", "");
                 }
 
                 // Extract images and attachments for each message
@@ -1102,8 +1111,8 @@ namespace AIToady.Harvester.ViewModels
 
             if ((DateTime.Now - _lastHarvestPageCall).TotalMinutes >= 10)
             {
-                Task.Run(async () => await _emailService?.SendEmailAsync(Environment.MachineName + "@AIToady.com", 
-                    $"Harvesting Stalled on {Environment.MachineName}", 
+                Task.Run(async () => await _emailService?.SendEmailAsync(_harvesterName + "@AIToady.com", 
+                    $"Harvesting Stalled on {_harvesterName}", 
                     $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}"));
 
                 await AddLogEntry($"Harvesting Stalled! HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}", HarvesterStatus.Stuck);
@@ -1139,8 +1148,13 @@ namespace AIToady.Harvester.ViewModels
             if (_client != null && _isHubOnline)
             {
                 if (status != HarvesterStatus.Harvesting)
-                    await _client.UpdateStatus(status);
+                {
+                    await _emailService?.SendEmailAsync(_harvesterName + "@AIToady.com",
+                    $"{status} on {_harvesterName}",
+                    $"HarvestPage() has not been called in 10 minutes. Forum: {ForumName}, Thread: {_threadName}");
 
+                    await _client.UpdateStatus(status);
+                }
                 await _client.Log(message);
             }
 
