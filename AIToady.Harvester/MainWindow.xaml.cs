@@ -16,7 +16,8 @@ namespace AIToady.Harvester
         HighRoadViewModel,
         FiringLineViewModel,
         GlockTalk,
-        AccurateReloading
+        AccurateReloading,
+        HandloadersBench
     }
 
     public partial class MainWindow : Window
@@ -774,6 +775,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<GlockTalkViewModel>();
             else if (viewModelType == ViewModelType.AccurateReloading)
                 newViewModel = _viewModel.CloneToViewModel<AccurateReloadingViewModel>();
+            else if (viewModelType == ViewModelType.HandloadersBench)
+                newViewModel = _viewModel.CloneToViewModel<HandloadersBenchViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             
