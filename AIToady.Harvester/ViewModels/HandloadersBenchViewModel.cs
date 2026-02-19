@@ -169,13 +169,22 @@ namespace AIToady.Harvester.ViewModels
                         });
                     }
                     
+                    let attachments = [];
+                    let photoPreview = post.querySelector('.js-photo-preview');
+                    if (photoPreview) {
+                        photoPreview.querySelectorAll('img[itemprop=""thumbnailUrl""]').forEach(img => {
+                            let photoUrl = img.src.replace('type=thumb', 'type=full');
+                            attachments.push(photoUrl);
+                        });
+                    }
+                    
                     messages.push({
                         postId: postId,
                         username: username,
                         message: message,
                         timestamp: timestamp,
                         images: images,
-                        attachments: []
+                        attachments: attachments
                     });
                 });
                 JSON.stringify(messages);
