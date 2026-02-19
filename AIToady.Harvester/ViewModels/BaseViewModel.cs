@@ -612,6 +612,12 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.HandloadersBench);
                 return;
             }
+            else if (uri.Host.Contains("castboolits") && GetType() != typeof(CastBoolitsViewModel))
+            {
+                SiteName = "Cast Boolits";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.CastBoolits);
+                return;
+            }
             else if (uri.Host.Contains("gbo") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Graybeard Outdoors";
