@@ -509,9 +509,7 @@ namespace AIToady.Harvester.ViewModels
                     _emailService?.SendEmailAsync(_harvesterName + "@AIToady.com", $"Tread With 0 Messages: {SiteName} - {ForumName} - {_threadName}", "");
                 }
 
-                // Extract images and attachments for each message
-                if (!_skipImages)
-                    await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
+                await ExtractImagesAndAttachments(thread, threadFolder, pageMessages);
 
                 AddLogEntry($"Page {_threadPageNumber} Harvested");
 
@@ -858,8 +856,8 @@ namespace AIToady.Harvester.ViewModels
 
                         string fileName = await GetFileNameFromUrl(i, imageUrl);
 
-                        if (!System.IO.Directory.Exists(imagesFolder))
-                            System.IO.Directory.CreateDirectory(imagesFolder);
+                        if (!Directory.Exists(imagesFolder))
+                            Directory.CreateDirectory(imagesFolder);
 
                         string imagePath = Path.Combine(imagesFolder, fileName);
                         if (File.Exists(imagePath))
@@ -870,7 +868,14 @@ namespace AIToady.Harvester.ViewModels
                             continue;
                         }
 
-                        string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
+                        if (_skipImages)
+                        {
+                            //Skipping downloading images, but still saving the URLs and intended file paths for reference
+                            imageNames.Add(JsonSerializer.Serialize(new { url = imageUrl, fileName = fileName }));
+                            continue;
+                        }
+                            
+                        string result = await ExtractImageRequested?.Invoke(imageUrl, fileName);
 
                         if (File.Exists(imagePath))
                         {
@@ -939,7 +944,14 @@ namespace AIToady.Harvester.ViewModels
                             continue;
                         }
 
-                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
+                        if (_skipImages)
+                        {
+                            //Skipping downloading attachments, but still saving the URLs and intended file paths for reference
+                            attachmentNames.Add(JsonSerializer.Serialize(new { url = attachmentUrl, fileName = fileName }));
+                            continue;
+                        }
+
+                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, fileName);
 
                         if (File.Exists(attachmentPath))
                         {
