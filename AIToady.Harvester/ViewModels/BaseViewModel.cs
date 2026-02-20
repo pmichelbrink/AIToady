@@ -634,6 +634,12 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
                 return;
             }
+            else if (uri.Host.Contains("rokslide") && GetType() != typeof(RokslideViewModel))
+            {
+                SiteName = "Rokslide";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.Rokslide);
+                return;
+            }
             else if (uri.Host.Contains("ar15") && GetType() != typeof(AR15ViewModel))
             {
                 ViewModelSwitchRequested?.Invoke(ViewModelType.AR15);
@@ -875,7 +881,7 @@ namespace AIToady.Harvester.ViewModels
                             continue;
                         }
                             
-                        string result = await ExtractImageRequested?.Invoke(imageUrl, fileName);
+                        string result = await ExtractImageRequested?.Invoke(imageUrl, imagePath);
 
                         if (File.Exists(imagePath))
                         {
@@ -951,7 +957,7 @@ namespace AIToady.Harvester.ViewModels
                             continue;
                         }
 
-                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, fileName);
+                        await ExtractAttachmentRequested?.Invoke(attachmentUrl, attachmentPath);
 
                         if (File.Exists(attachmentPath))
                         {
