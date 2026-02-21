@@ -72,11 +72,13 @@
             widget.onclick = (e) => {
                 if (e.target.classList.contains('close-btn')) {
                     widget.classList.remove('expanded');
+                    e.stopPropagation();
                 } else if (e.target.classList.contains('delete-btn')) {
                     if (confirm(`Delete ${id}?`)) {
                         fetch(`/api/harvester/${encodeURIComponent(id)}`, { method: 'DELETE' });
                     }
-                } else if (e.target.closest('.widget') === widget) {
+                    e.stopPropagation();
+                } else {
                     widget.classList.toggle('expanded');
                 }
             };
