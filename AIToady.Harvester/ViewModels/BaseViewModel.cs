@@ -281,13 +281,14 @@ namespace AIToady.Harvester.ViewModels
             if (!IsReadyToHarvest())
                 return;
 
-            _harvesterName = $"{Environment.MachineName}-{SiteName}";
+            _harvesterName = $"{Environment.MachineName}-{SiteName}-{ForumName}";
             _client = new HubClient(_harvesterName);
 
             bool hasNextForumPage = true;
             while (_isHarvesting && hasNextForumPage)
             {
-                AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromUrl(Url)} - - - - -");
+                await AddLogEntry($"- - - - - Starting Forum Page {GetPageNumberFromForumUrl(Url)} - - - - -");
+                await _client.UpdateStatus(HarvesterStatus.Harvesting, $"Page {GetPageNumberFromForumUrl(Url)}");
 
                 await ExecuteLoadThreads();
 
@@ -746,10 +747,12 @@ namespace AIToady.Harvester.ViewModels
                 }
             } while (Utilities.IsValidForumUrl(currentUrl) && currentUrl?.TrimEnd('/') != Url?.TrimEnd('/') && _isHarvesting);
         }
-        public int GetPageNumberFromUrl(string url)
+        public int GetPageNumberFromForumUrl(string url)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(url, @"/page-(\d+)");
-            return match.Success ? int.Parse(match.Groups[1].Value) : 1;
+            var match = System.Text.RegularExpressions.Regex.Match(url, @"(?:/page-?(\d+)|[?&]page=(\d+))");
+            if (match.Success)
+                return int.Parse(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value);
+            return 1;
         }
         private bool IsUrlFromBadDomain(string imageUrl)
         {

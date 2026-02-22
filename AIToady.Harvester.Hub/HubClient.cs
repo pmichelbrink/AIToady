@@ -26,11 +26,11 @@ public class HubClient
         _id = harvesterId;
     }
 
-    public async Task<bool> UpdateStatus(HarvesterStatus status)
+    public async Task<bool> UpdateStatus(HarvesterStatus status, string statusMessage = null)
     {
         try 
         { 
-            await _http.PostAsJsonAsync($"/api/harvester/{_id}/status", new { Status = status.ToString() });
+            await _http.PostAsJsonAsync($"/api/harvester/{_id}/status", new { Status = status.ToString(), StatusMessage = statusMessage });
             return true;
         }
         catch { return false; }

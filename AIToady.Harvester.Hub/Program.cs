@@ -15,8 +15,8 @@ app.UseStaticFiles();
 app.MapHub<HarvesterHub>("/hub");
 app.MapPost("/api/harvester/{id}/status", (string id, StatusUpdate update, HubDatabase db, IHubContext<HarvesterHub> hub) =>
 {
-    db.UpdateStatus(id, update.Status);
-    hub.Clients.All.SendAsync("statusUpdate", id, update.Status);
+    db.UpdateStatus(id, update.Status, update.StatusMessage);
+    hub.Clients.All.SendAsync("statusUpdate", id, update.Status, update.StatusMessage);
 });
 app.MapPost("/api/harvester/{id}/log", (string id, LogEntryRequest entry, HubDatabase db, IHubContext<HarvesterHub> hub) =>
 {
@@ -31,5 +31,5 @@ app.MapDelete("/api/harvester/{id}", (string id, HubDatabase db, IHubContext<Har
 });
 app.Run();
 
-record StatusUpdate(string Status);
+record StatusUpdate(string Status, string StatusMessage);
 record LogEntryRequest(string Message);

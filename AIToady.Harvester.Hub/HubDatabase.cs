@@ -21,13 +21,13 @@ public class HubDatabase
         ", conn).ExecuteNonQuery();
     }
 
-    public void UpdateStatus(string id, string status)
+    public void UpdateStatus(string id, string status, string statusMessage = null)
     {
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
         var cmd = new SqliteCommand("INSERT OR REPLACE INTO harvesters (id, status) VALUES (@id, @status)", conn);
         cmd.Parameters.AddWithValue("@id", id);
-        cmd.Parameters.AddWithValue("@status", status);
+        cmd.Parameters.AddWithValue("@status", statusMessage != null ? $"{status} - {statusMessage}" : status);
         cmd.ExecuteNonQuery();
     }
 

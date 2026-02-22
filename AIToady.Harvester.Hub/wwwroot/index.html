@@ -46,9 +46,9 @@
             }
 
             const conn = new signalR.HubConnectionBuilder().withUrl('/hub').build();
-            conn.on('statusUpdate', (id, status) => {
+            conn.on('statusUpdate', (id, status, statusMessage) => {
                 if (!harvesters[id]) { harvesters[id] = { status: status, logs: [] }; createWidget(id); }
-                harvesters[id].status = status;
+                harvesters[id].status = statusMessage ? `${status} - ${statusMessage}` : status;
                 updateWidget(id);
             });
             conn.on('logUpdate', (id, logEntry) => {
