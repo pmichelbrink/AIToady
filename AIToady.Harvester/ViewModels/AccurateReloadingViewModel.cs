@@ -220,7 +220,7 @@ namespace AIToady.Harvester.ViewModels
         }
         protected override bool IsBoardPage(string url)
         {
-            if (url.Contains("/forums/bullet-tests.41", StringComparison.OrdinalIgnoreCase))
+            if (url.Contains("/forums/a/cfrm"))
                 return true;
             else
                 return false;
@@ -231,12 +231,10 @@ namespace AIToady.Harvester.ViewModels
             {
                 string script = @"
                     let links = [];
-                    document.querySelectorAll('a[href*=""/forums/""]').forEach(a => {
-                        if (a.href.match(/\/forums\/[^\/]+\/?$/)) {
-                            links.push(a.href);
-                        }
+                    document.querySelectorAll('td.ev_forum_td_title a.ubbx_cfrm_com_title_link').forEach(a => {
+                        links.push(a.href);
                     });
-                    JSON.stringify([...new Set(links)]);
+                    JSON.stringify(links);
                 ";
                 
                 string result = await InvokeExecuteScriptRequested(script);
