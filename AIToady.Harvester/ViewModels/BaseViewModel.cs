@@ -51,7 +51,7 @@ namespace AIToady.Harvester.ViewModels
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
             "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com",
-            "community.webshots.com", "buckeye-express.com", "gunownerstv.com"
+            "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com"
         };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
@@ -654,6 +654,12 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("thefiringline") && GetType() != typeof(FiringLineViewModel))
             {
                 ViewModelSwitchRequested?.Invoke(ViewModelType.FiringLineViewModel);
+                return;
+            }
+            else if (uri.Host.Contains("m4carbine") && GetType() != typeof(M4CarbineViewModel))
+            {
+                SiteName = "M4 Carbine";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.M4Carbine);
                 return;
             }
 
