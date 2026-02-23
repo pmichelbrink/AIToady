@@ -865,6 +865,9 @@ namespace AIToady.Harvester.ViewModels
 
                         string fileName = await GetFileNameFromUrl(i, imageUrl);
 
+                        if (Path.GetExtension(fileName).Equals(".gif", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
                         if (!Directory.Exists(imagesFolder))
                             Directory.CreateDirectory(imagesFolder);
 
@@ -940,6 +943,9 @@ namespace AIToady.Harvester.ViewModels
                         }
 
                         string fileName = await GetFileNameFromUrl(i, attachmentUrl);
+
+                        if (Path.GetExtension(fileName).Equals(".gif", StringComparison.OrdinalIgnoreCase))
+                            continue;
 
                         if (!System.IO.Directory.Exists(attachmentsFolder))
                             System.IO.Directory.CreateDirectory(attachmentsFolder);
