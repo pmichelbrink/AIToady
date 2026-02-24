@@ -20,7 +20,8 @@ namespace AIToady.Harvester
         HandloadersBench,
         CastBoolits,
         Rokslide,
-        M4Carbine
+        M4Carbine,
+        BrianEnos
     }
 
     public partial class MainWindow : Window
@@ -786,6 +787,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<CastBoolitsViewModel>();
             else if (viewModelType == ViewModelType.M4Carbine)
                 newViewModel = _viewModel.CloneToViewModel<M4CarbineViewModel>();
+            else if (viewModelType == ViewModelType.BrianEnos)
+                newViewModel = _viewModel.CloneToViewModel<BrianEnosViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             

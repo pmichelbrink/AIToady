@@ -53,6 +53,11 @@ namespace AIToady.Harvester.ViewModels
             "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com",
             "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com"
         };
+        protected HashSet<string> _skipImageNames = new HashSet<string>
+        {
+            "default_unsure.png", "default_wink.png", "default_blush.png", "default_wacko.png",
+            "default_blink.png", "default_wub.png", "default_biggrin.png", "default_mellow.png"
+        };
         protected Random _random = new Random();
         protected int _forumPageNumber = 1;
         protected int _threadPageNumber = 1;
@@ -662,6 +667,12 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.M4Carbine);
                 return;
             }
+            else if (uri.Host.Contains("brianenos") && GetType() != typeof(BrianEnosViewModel))
+            {
+                SiteName = "Brian Enos Forums";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.BrianEnos);
+                return;
+            }
 
             NavigateRequested?.Invoke(url);
             await Task.Delay(2000);
@@ -872,6 +883,13 @@ namespace AIToady.Harvester.ViewModels
                         string fileName = await GetFileNameFromUrl(i, imageUrl);
 
                         if (Path.GetExtension(fileName).Equals(".gif", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        if (fileName.Contains("smile.", StringComparison.InvariantCultureIgnoreCase) ||
+                            fileName.Contains("smiley.", StringComparison.InvariantCultureIgnoreCase))
+                            continue;
+
+                        if (_skipImageNames.Contains(fileName))
                             continue;
 
                         if (!Directory.Exists(imagesFolder))
