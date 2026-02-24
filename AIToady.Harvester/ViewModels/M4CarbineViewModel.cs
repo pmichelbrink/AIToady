@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Windows;
 
 namespace AIToady.Harvester.ViewModels
 {
@@ -113,6 +114,21 @@ namespace AIToady.Harvester.ViewModels
                     return;
                 }
 
+                string threadsFilePath = $"{SiteName}_{ForumName}_threads.json";
+                if (File.Exists(threadsFilePath))
+                {
+                    var result = MessageBox.Show($"Threads file found. Load from {threadsFilePath}?", "Load Threads", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        string json = File.ReadAllText(threadsFilePath);
+                        var loadedThreads = JsonSerializer.Deserialize<ThreadInfo[]>(json);
+                        _threadInfos.Clear();
+                        _threadInfos.AddRange(loadedThreads);
+                        AddLogEntry($"Loaded {loadedThreads.Length} threads from file");
+                        return;
+                    }
+                }
+
                 string getThreadsScript = @"
                     (function() {
                         let threads = [];
@@ -174,6 +190,10 @@ namespace AIToady.Harvester.ViewModels
                     _threadInfos.Clear();
                     _threadInfos.AddRange(finalThreads);
                     AddLogEntry($"Finished loading {finalThreads.Length} threads");
+                    
+                    string json = JsonSerializer.Serialize(finalThreads, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(threadsFilePath, json);
+                    AddLogEntry($"Threads written to: {threadsFilePath}");
                 }
                 else
                 {
