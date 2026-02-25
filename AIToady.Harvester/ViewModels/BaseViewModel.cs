@@ -600,6 +600,12 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
+            if (uri.Host.Contains("shotgunworld") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Shotgun World";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
             else if (uri.Host.Contains("gunboards") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Gunboards";

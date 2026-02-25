@@ -177,8 +177,8 @@ namespace AIToady.Harvester.ViewModels
                 string result = await InvokeExecuteScriptRequested(extractScript);
                 if (!string.IsNullOrEmpty(result))
                 {
-                    result = System.Text.Json.JsonSerializer.Deserialize<string>(result);
-                    return System.Text.Json.JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
+                    result = JsonSerializer.Deserialize<string>(result);
+                    return JsonSerializer.Deserialize<List<ForumMessage>>(result) ?? new List<ForumMessage>();
                 }
             }
             catch (TaskCanceledException)
