@@ -51,7 +51,8 @@ namespace AIToady.Harvester.ViewModels
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
             "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com",
-            "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com"
+            "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com",
+            "staticflickr.com"
         };
         protected HashSet<string> _skipImageNames = new HashSet<string>
         {
