@@ -36,17 +36,40 @@ namespace AIToady.Harvester.ViewModels
                     {
                         ForumName = string.Join("_", result.Split(Path.GetInvalidFileNameChars()));
                         if (Url.Contains("akfiles", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "The AK Files";
-                        else if(Url.Contains("falfiles", StringComparison.InvariantCultureIgnoreCase))
+                            MessagesPerPage = 25;
+                        }
+                        else if (Url.Contains("falfiles", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "The FAL Files";
+                            MessagesPerPage = 25;
+                        }
                         else if (Url.Contains("snipershide", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "Snipers Hide";
+                            MessagesPerPage = 50;
+                        }
                         else if (Url.Contains("thehighroad", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "The High Road";
+                            MessagesPerPage = 25;
+                        }
                         else if (Url.Contains("thefiringline", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "The Firing Line";
+                            MessagesPerPage = 50;
+                        }
                         else if (Url.Contains("accurateshooter", StringComparison.InvariantCultureIgnoreCase))
+                        {
                             SiteName = "Accurate Shooter";
+                            MessagesPerPage = 50;
+                        }
+                        else if (Url.Contains("northeastshooters", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Northeast Shooters";
+                            MessagesPerPage = 30;
+                        }
                     }
                 }
 
