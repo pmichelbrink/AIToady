@@ -165,6 +165,19 @@ private void LoadWindowSettings()
                     await ExtractImageWithBrowser(attachmentUrl, filePath);
                     return;
                 }
+                
+                bool isPdf = filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                
+                if (isPdf)
+                {
+                    using (var httpClient = new System.Net.Http.HttpClient())
+                    {
+                        var bytes = await httpClient.GetByteArrayAsync(attachmentUrl);
+                        await File.WriteAllBytesAsync(filePath, bytes);
+                    }
+                    return;
+                }
+                
                 string currentUrl = WebView.Source?.ToString();
                 WebView.Source = new Uri(attachmentUrl);
                 await Task.Delay(3000);

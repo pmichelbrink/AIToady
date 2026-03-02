@@ -613,10 +613,6 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
-            else if (uri.Host.Contains("nosler"))
-            {
-                SiteName = "Nosler";
-            }
             else if (uri.Host.Contains("handloadersbench") && GetType() != typeof(HandloadersBenchViewModel))
             {
                 SiteName = "Handloaders Bench";
@@ -1005,7 +1001,16 @@ namespace AIToady.Harvester.ViewModels
                         }
                         else
                         {
-                            AddLogEntry($"Attachment download failed for {fileName}");
+                            string baseNameWithoutExt = Path.GetFileNameWithoutExtension(fileName).Replace(".", "-");
+                            var matchingFile = Directory.GetFiles(attachmentsFolder, $"{baseNameWithoutExt}.*").FirstOrDefault();
+                            if (matchingFile != null)
+                            {
+                                attachmentNames.Add(Path.GetFileName(matchingFile));
+                            }
+                            else
+                            {
+                                AddLogEntry($"Attachment download failed for {fileName}");
+                            }
                         }
                     }
                     catch (TaskCanceledException)
@@ -1316,6 +1321,27 @@ namespace AIToady.Harvester.ViewModels
                     return xenForoFileName;
             }
 
+            // Check for response-content-type in query string before stripping parameters
+            string extensionFromContentType = null;
+            if (attachmentUrl.Contains("response-content-type="))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(attachmentUrl, @"response-content-type=([^&]+)");
+                if (match.Success)
+                {
+                    var contentType = Uri.UnescapeDataString(match.Groups[1].Value);
+                    extensionFromContentType = contentType switch
+                    {
+                        "image/jpeg" => ".jpg",
+                        "image/png" => ".png",
+                        "image/gif" => ".gif",
+                        "image/webp" => ".webp",
+                        "application/vnd.ms-excel" => ".xls",
+                        "application/pdf" => ".pdf",
+                        _ => null
+                    };
+                }
+            }
+
             // Strip query parameters
             if (attachmentUrl.Contains("?"))
                 attachmentUrl = attachmentUrl.Split('?')[0];
@@ -1359,6 +1385,10 @@ namespace AIToady.Harvester.ViewModels
                 {
                     fileName = string.Join(".", parts.Take(parts.Length - 1));
                 }
+                
+                // Replace extension if we found one in response-content-type
+                if (extensionFromContentType != null && Path.GetExtension(fileName) == ".data")
+                    fileName = Path.GetFileNameWithoutExtension(fileName) + extensionFromContentType;
             }
 
             fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));

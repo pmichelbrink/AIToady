@@ -70,6 +70,16 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Northeast Shooters";
                             MessagesPerPage = 30;
                         }
+                        else if (Url.Contains("nosler"))
+                        {
+                            SiteName = "Nosler";
+                            MessagesPerPage = 20;
+                        }
+                        else if (Url.Contains("longrangehunting"))
+                        {
+                            SiteName = "Long Range Hunting";
+                            MessagesPerPage = 14;
+                        }
                     }
                 }
 
