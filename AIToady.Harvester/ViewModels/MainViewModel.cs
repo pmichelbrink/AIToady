@@ -80,6 +80,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Long Range Hunting";
                             MessagesPerPage = 14;
                         }
+                        else if (Url.Contains("predatormasters"))
+                        {
+                            SiteName = "Predator Masters";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
