@@ -51,8 +51,7 @@ namespace AIToady.Harvester.ViewModels
             "picyard.com", "nodakspud.com", "vcmedia.vn", "villagephotos.com", "geocities.com",
             "gunscience.com", "picfury.com", "handgunblog.com", "htmlsitedesign.com", "blackwellindustries.com",
             "62x54r.net", "zombieboxes.com", "hunt101.com", "nothingbutguns.com", "360WD.com", "photos.smugmug.com",
-            "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com",
-            "staticflickr.com"
+            "community.webshots.com", "buckeye-express.com", "gunownerstv.com", "tapatalk-cdn.com"
         };
         protected HashSet<string> _skipImageNames = new HashSet<string>
         {
@@ -676,6 +675,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.BrianEnos);
                 return;
             }
+            else if (uri.Host.Contains("huntingnet") && GetType() != typeof(HuntingNetViewModel))
+            {
+                SiteName = "Hunting Net";
+                MessagesPerPage = 10;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.HuntingNet);
+                return;
+            }
 
             NavigateRequested?.Invoke(url);
             await Task.Delay(2000);
@@ -769,9 +775,16 @@ namespace AIToady.Harvester.ViewModels
         }
         public int GetPageNumberFromForumUrl(string url)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(url, @"(?:/page-?(\d+)|[?&]page=(\d+))");
+            var match = System.Text.RegularExpressions.Regex.Match(url, @"(?:/page-?(\d+)|[?&]page=(\d+)|-(\d+)\.html)");
             if (match.Success)
-                return int.Parse(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value);
+            {
+                if (match.Groups[1].Success)
+                    return int.Parse(match.Groups[1].Value);
+                if (match.Groups[2].Success)
+                    return int.Parse(match.Groups[2].Value);
+                if (match.Groups[3].Success)
+                    return int.Parse(match.Groups[3].Value);
+            }
             return 1;
         }
         private bool IsUrlFromBadDomain(string imageUrl)
