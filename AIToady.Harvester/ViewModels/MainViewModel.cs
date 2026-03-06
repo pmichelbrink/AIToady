@@ -85,6 +85,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Predator Masters";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("africahunting"))
+                        {
+                            SiteName = "Africa Hunting";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
