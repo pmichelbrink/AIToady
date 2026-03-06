@@ -201,8 +201,8 @@ namespace AIToady.Harvester.ViewModels
                         let postId = postDiv.id.replace('post', '');
                         let usernameElement = postDiv.querySelector('a.bigusername');
                         let username = usernameElement ? usernameElement.textContent.trim() : 'Unknown';
-                        let dateElement = postDiv.querySelector('.trow.thead.smallfont .tcell');
-                        let timestamp = dateElement ? dateElement.textContent.trim() : '';
+                        let timeElement = postDiv.querySelector('time.u-dt[datetime]') || postDiv.querySelector('.trow.thead.smallfont .tcell');
+                        let timestamp = timeElement ? (timeElement.getAttribute('datetime') || timeElement.textContent.trim()) : '';
                         let messageBodyElement = postDiv.querySelector('div[id^=""post_message_""]');
                         let images = [];
                         let attachments = [];

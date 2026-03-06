@@ -90,6 +90,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Africa Hunting";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("hunttalk"))
+                        {
+                            SiteName = "Hunt Talk";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
