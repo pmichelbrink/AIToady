@@ -22,7 +22,8 @@ namespace AIToady.Harvester
         Rokslide,
         M4Carbine,
         BrianEnos,
-        HuntingNet
+        HuntingNet,
+        Campfire
     }
 
     public partial class MainWindow : Window
@@ -805,6 +806,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<BrianEnosViewModel>();
             else if (viewModelType == ViewModelType.HuntingNet)
                 newViewModel = _viewModel.CloneToViewModel<HuntingNetViewModel>();
+            else if (viewModelType == ViewModelType.Campfire)
+                newViewModel = _viewModel.CloneToViewModel<CampfireViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             

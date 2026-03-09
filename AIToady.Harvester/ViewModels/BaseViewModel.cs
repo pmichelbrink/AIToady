@@ -682,6 +682,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.HuntingNet);
                 return;
             }
+            else if (uri.Host.Contains("campfire") && GetType() != typeof(CampfireViewModel))
+            {
+                SiteName = "24 Hour Campfire";
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.Campfire);
+                return;
+            }
 
             NavigateRequested?.Invoke(url);
             await Task.Delay(2000);
