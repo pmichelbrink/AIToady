@@ -600,6 +600,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
+            else if (uri.Host.Contains("huntingpa") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Hunting PA";
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
             else if (uri.Host.Contains("shotgunworld") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Shotgun World";
@@ -609,6 +616,12 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("gunboards") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Gunboards";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("gbo") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Graybeard Outdoors";
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
@@ -622,12 +635,6 @@ namespace AIToady.Harvester.ViewModels
             {
                 SiteName = "Cast Boolits";
                 ViewModelSwitchRequested?.Invoke(ViewModelType.CastBoolits);
-                return;
-            }
-            else if (uri.Host.Contains("gbo") && GetType() != typeof(TheAKForumViewModel))
-            {
-                SiteName = "Graybeard Outdoors";
-                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
             else if (uri.Host.Contains("accuratereloading") && GetType() != typeof(AccurateReloadingViewModel))
