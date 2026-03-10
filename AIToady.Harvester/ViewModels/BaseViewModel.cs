@@ -829,7 +829,8 @@ namespace AIToady.Harvester.ViewModels
             }).ToList();
         }
         public async Task ExtractImagesAndAttachments(ForumThread thread, string threadFolder, List<ForumMessage> pageMessages)
-        {
+        { 
+            bool imaageFound = false;
             string imagesFolder = Path.Combine(threadFolder, "Images");
             string attachmentsFolder = Path.Combine(threadFolder, "Attachments");
 
@@ -838,6 +839,8 @@ namespace AIToady.Harvester.ViewModels
                 var imageNames = new List<string>();
                 for (int i = 0; i < message.Images.Count; i++)
                 {
+                    imaageFound = true;
+
                     try
                     {
                         string imageUrl = message.Images[i];
@@ -985,6 +988,8 @@ namespace AIToady.Harvester.ViewModels
                 var attachmentNames = new List<string>();
                 for (int i = 0; i < message.Attachments.Count; i++)
                 {
+                    imaageFound = true;
+
                     try
                     {
                         string attachmentUrl = message.Attachments[i];
@@ -1053,6 +1058,9 @@ namespace AIToady.Harvester.ViewModels
             }
 
             thread.Messages.AddRange(pageMessages);
+
+            if (imaageFound)
+                await Task.Delay(GetRandomizedDelay());
         }
         private void CheckForFlickrAlbumImages(string imagesFolder, List<string> imageNames, string imagePath)
         {
