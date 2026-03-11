@@ -91,8 +91,6 @@ namespace AIToady.Harvester.ViewModels
                 return false;
             }
 
-            await Task.Delay(GetRandomizedDelay());
-
             try
             {
                 string script = @"
