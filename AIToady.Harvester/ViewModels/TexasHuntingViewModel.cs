@@ -10,9 +10,9 @@ namespace AIToady.Harvester.ViewModels
     /// This view model can be used some PHP forums, for customization create a new
     /// view model that inherits from BaseViewModel
     /// </summary>
-    public class CampfireViewModel : BaseViewModel
+    public class TexasHuntingViewModel : BaseViewModel
     {
-        public CampfireViewModel()
+        public TexasHuntingViewModel()
         {
             MessagesPerPage = 15;
         }
@@ -153,13 +153,27 @@ namespace AIToady.Harvester.ViewModels
                         document.querySelectorAll('tr[id^=""postrow-inline-""]').forEach(row => {
                             let subjectTd = row.querySelector('td[class*=""topicsubject""]');
                             if (subjectTd) {
-                                let link = subjectTd.querySelector('div:first-child a');
                                 let dateSpan = subjectTd.querySelector('.fa-clock').closest('div').querySelector('span.date');
-                                if (link && link.href) {
+                                
+                                let pageNavLink = subjectTd.querySelector('a.pagenav[href*=""/1/""]');
+                                if (pageNavLink && pageNavLink.href) {
                                     threads.push({ 
-                                        url: link.href, 
+                                        url: pageNavLink.href, 
                                         lastPostDate: dateSpan ? dateSpan.textContent.trim() : null 
                                     });
+                                } else {
+                                    let mainLink = subjectTd.querySelector('div:first-child a');
+                                    if (mainLink && mainLink.href) {
+                                        let url = mainLink.href.split('#')[0];
+                                        let match = url.match(/\/topics\/(\d+)\//);  
+                                        if (match) {
+                                            url = url.replace(/\/topics\/(\d+)\/.*/, '/topics/$1/1');
+                                        }
+                                        threads.push({ 
+                                            url: url, 
+                                            lastPostDate: dateSpan ? dateSpan.textContent.trim() : null 
+                                        });
+                                    }
                                 }
                             }
                         });
@@ -182,8 +196,16 @@ namespace AIToady.Harvester.ViewModels
         {
             string titleScript = @"
                 (function() {
-                    let titleDiv = document.querySelector('div.truncate.bold');
-                    return titleDiv ? titleDiv.getAttribute('title') : '';
+                    let breadcrumb = document.querySelector('#breadcrumbs span[style*=""display:inline""]');
+                    if (breadcrumb) {
+                        let lastText = Array.from(breadcrumb.childNodes)
+                            .filter(node => node.nodeType === Node.TEXT_NODE)
+                            .map(node => node.textContent.trim())
+                            .filter(text => text.length > 0)
+                            .pop();
+                        if (lastText) return lastText;
+                    }
+                    return '';
                 })()
             ";
 
@@ -209,48 +231,48 @@ namespace AIToady.Harvester.ViewModels
             string extractScript = @"
                 (function() {
                     let messages = [];
-                    document.querySelectorAll('table.fw').forEach(table => {
-                        let authorTd = table.querySelector('td.author-content[rowspan=""2""]');
-                        let postContentTd = table.querySelector('td.post-content');
+                    document.querySelectorAll('div[id^=""body""]').forEach(bodyDiv => {
+                        let table = bodyDiv.closest('table.fw');
+                        if (!table) return;
                         
-                        if (authorTd && postContentTd) {
-                            let usernameElement = authorTd.querySelector('.author-name .username');
-                            let username = usernameElement ? usernameElement.textContent.trim() : 'Unknown';
-                            
-                            let subjectTd = table.querySelector('td.subjecttable');
-                            let postId = '';
-                            let timestamp = '';
-                            
-                            if (subjectTd) {
-                                let postIdLink = subjectTd.querySelector('a[id^=""number""]');
-                                if (postIdLink) {
-                                    postId = postIdLink.textContent.trim();
-                                }
-                                let dateSpan = subjectTd.querySelector('span.date');
-                                if (dateSpan) {
-                                    timestamp = dateSpan.textContent.trim();
-                                }
+                        let username = 'Unknown';
+                        let authorLink = table.querySelector('td.author-content a.bold[href*=""/users/""]');
+                        if (authorLink) {
+                            username = authorLink.textContent.trim();
+                        }
+                        
+                        let postId = '';
+                        let timestamp = '';
+                        let subjectTd = table.querySelector('td.subjecttable');
+                        if (subjectTd) {
+                            let postIdLink = subjectTd.querySelector('a[id^=""number""]');
+                            if (postIdLink) {
+                                postId = postIdLink.textContent.trim();
                             }
-                            
-                            let bodyDiv = postContentTd.querySelector('div[id^=""body""]');
-                            if (bodyDiv) {
-                                let images = [];
-                                postContentTd.querySelectorAll('img.post-image').forEach(img => {
-                                    if (img.src) {
-                                        images.push(img.src);
-                                    }
-                                });
-                                
-                                messages.push({
-                                    postId: postId,
-                                    username: username,
-                                    message: bodyDiv.textContent.trim().replace(/\s+/g, ' '),
-                                    timestamp: timestamp,
-                                    images: images,
-                                    attachments: []
-                                });
+                            let dateSpan = subjectTd.querySelector('span.date');
+                            if (dateSpan) {
+                                timestamp = dateSpan.textContent.trim();
                             }
                         }
+                        
+                        let images = [];
+                        let postContentTd = bodyDiv.closest('td.post-content');
+                        if (postContentTd) {
+                            postContentTd.querySelectorAll('img.post-image').forEach(img => {
+                                if (img.src) {
+                                    images.push(img.src);
+                                }
+                            });
+                        }
+                        
+                        messages.push({
+                            postId: postId,
+                            username: username,
+                            message: bodyDiv.textContent.trim().replace(/\s+/g, ' '),
+                            timestamp: timestamp,
+                            images: images,
+                            attachments: []
+                        });
                     });
                     return JSON.stringify(messages);
                 })()

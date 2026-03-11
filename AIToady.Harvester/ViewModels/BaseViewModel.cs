@@ -696,6 +696,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.Campfire);
                 return;
             }
+            else if (uri.Host.Contains("texashunting") && GetType() != typeof(TexasHuntingViewModel))
+            {
+                SiteName = "Texas Hunting";
+                MessagesPerPage = 25;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TexasHunting);
+                return;
+            }
             else if (uri.Host.Contains("thehuntinglife") && GetType() != typeof(HuntingLifeViewModel))
             {
                 SiteName = "The Hunting Life";

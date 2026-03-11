@@ -24,7 +24,8 @@ namespace AIToady.Harvester
         BrianEnos,
         HuntingNet,
         Campfire,
-        HuntingLife
+        HuntingLife,
+        TexasHunting
     }
 
     public partial class MainWindow : Window
@@ -809,6 +810,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<HuntingNetViewModel>();
             else if (viewModelType == ViewModelType.Campfire)
                 newViewModel = _viewModel.CloneToViewModel<CampfireViewModel>();
+            else if (viewModelType == ViewModelType.TexasHunting)
+                newViewModel = _viewModel.CloneToViewModel<TexasHuntingViewModel>();
             else if (viewModelType == ViewModelType.HuntingLife)
                 newViewModel = _viewModel.CloneToViewModel<HuntingLifeViewModel>();
             else
