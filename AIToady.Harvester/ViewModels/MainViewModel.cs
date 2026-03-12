@@ -95,6 +95,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Hunt Talk";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("northeast"))
+                        {
+                            SiteName = "Northeast Shooters";
+                            MessagesPerPage = 30;
+                        }
                     }
                 }
 
