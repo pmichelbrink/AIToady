@@ -652,6 +652,14 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("rokslide") && GetType() != typeof(RokslideViewModel))
             {
                 SiteName = "Rokslide";
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.Rokslide);
+                return;
+            }
+            else if (uri.Host.Contains("refuge") && GetType() != typeof(RokslideViewModel))
+            {
+                SiteName = "Duck Hunters Refuge";
+                MessagesPerPage = 10;
                 ViewModelSwitchRequested?.Invoke(ViewModelType.Rokslide);
                 return;
             }
