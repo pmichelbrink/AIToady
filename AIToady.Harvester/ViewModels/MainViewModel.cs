@@ -100,6 +100,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Northeast Shooters";
                             MessagesPerPage = 30;
                         }
+                        else if (Url.Contains("muley"))
+                        {
+                            SiteName = "Monster Muleys";
+                            MessagesPerPage = 100;
+                        }
                     }
                 }
 
