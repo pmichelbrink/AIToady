@@ -105,6 +105,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Monster Muleys";
                             MessagesPerPage = 100;
                         }
+                        else if (Url.Contains("ultimatepheasant"))
+                        {
+                            SiteName = "Ultimate Pheasant Hunting";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
