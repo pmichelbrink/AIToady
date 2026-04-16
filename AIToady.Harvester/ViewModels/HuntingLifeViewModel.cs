@@ -51,7 +51,7 @@ namespace AIToady.Harvester.ViewModels
             {
                 string script = @"
                     (function() {
-                        let nextLi = document.querySelector('li.ipsPagination_next a[rel=""next""]');
+                        let nextLi = document.querySelector('li.ipsPagination_next:not(.ipsPagination_inactive) a[rel=""next""]');
                         if (nextLi && nextLi.href) {
                             return nextLi.href;
                         }
