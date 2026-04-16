@@ -25,7 +25,8 @@ namespace AIToady.Harvester
         HuntingNet,
         Campfire,
         HuntingLife,
-        TexasHunting
+        TexasHunting,
+        RimfireCentral
     }
 
     public partial class MainWindow : Window
@@ -794,6 +795,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<FiringLineViewModel>();
             else if (viewModelType == ViewModelType.GlockTalk)
                 newViewModel = _viewModel.CloneToViewModel<GlockTalkViewModel>();
+            else if (viewModelType == ViewModelType.RimfireCentral)
+                newViewModel = _viewModel.CloneToViewModel<RimfireCentralViewModel>();
             else if (viewModelType == ViewModelType.Rokslide)
                 newViewModel = _viewModel.CloneToViewModel<RokslideViewModel>();
             else if (viewModelType == ViewModelType.AccurateReloading)

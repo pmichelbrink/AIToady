@@ -649,6 +649,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
                 return;
             }
+            else if (uri.Host.Contains("rimfire") && GetType() != typeof(RimfireCentralViewModel))
+            {
+                MessagesPerPage = 10;
+                SiteName = "Rimfire Central";
+                ViewModelSwitchRequested?.Invoke(ViewModelType.RimfireCentral);
+                return;
+            }
             else if (uri.Host.Contains("rokslide") && GetType() != typeof(RokslideViewModel))
             {
                 SiteName = "Rokslide";
