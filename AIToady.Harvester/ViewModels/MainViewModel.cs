@@ -110,6 +110,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Ultimate Pheasant Hunting";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("longrangeonly"))
+                        {
+                            SiteName = "Long Range Only";
+                            MessagesPerPage = 50;
+                        }
                     }
                 }
 
@@ -171,7 +176,10 @@ namespace AIToady.Harvester.ViewModels
                 document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
                     let userElement = messageDiv.querySelector('.message-name a') || messageDiv.querySelector('.message-name .username');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
-                    let timeElement = messageDiv.querySelector('.u-dt') || messageDiv.querySelector('time[datetime]');
+                    let parentArticle = messageDiv.closest('article');
+                    let headerEl = parentArticle ? parentArticle.querySelector('.message-header') : null;
+                    let timeElement = (headerEl ? headerEl.querySelector('.u-dt') || headerEl.querySelector('time[datetime]') : null)
+                        || messageDiv.querySelector('.u-dt') || messageDiv.querySelector('time[datetime]');
                     let images = [];
                     let attachments = [];
                     
