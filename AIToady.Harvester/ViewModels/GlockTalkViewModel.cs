@@ -105,9 +105,10 @@ namespace AIToady.Harvester.ViewModels
             string extractScript = $@"
                 let messages = [];
                 document.querySelectorAll('{messageSelector}').forEach(messageDiv => {{
-                    let userElement = messageDiv.querySelector('.message-name a') || messageDiv.querySelector('.message-name .username') || messageDiv.closest('.message-cell').previousElementSibling?.querySelector('.message-name a');
+                    let container = messageDiv.closest('.MessageCard__container') || messageDiv.closest('.message-cell');
+                    let userElement = container?.querySelector('.MessageCard__user-info__name') || container?.querySelector('.message-name a') || container?.querySelector('.message-name .username');
                     let messageBodyElement = messageDiv.querySelector('.message-body');
-                    let timeElement = messageDiv.querySelector('.u-dt');
+                    let timeElement = container?.querySelector('.MessageCard__date-created .u-dt') || container?.querySelector('.MessageCard__nested-postbit .u-dt') || messageDiv.querySelector('.u-dt');
                     let images = [];
                     let attachments = [];
                     

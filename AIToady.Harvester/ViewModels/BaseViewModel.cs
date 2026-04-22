@@ -649,6 +649,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
                 return;
             }
+            else if (uri.Host.Contains("firearmstalk") && GetType() != typeof(GlockTalkViewModel))
+            {
+                SiteName = "Firearms Talk";
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.GlockTalk);
+                return;
+            }
             else if (uri.Host.Contains("rimfire") && GetType() != typeof(RimfireCentralViewModel))
             {
                 MessagesPerPage = 10;
