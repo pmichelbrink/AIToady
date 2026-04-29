@@ -135,6 +135,14 @@ namespace AIToady.Harvester.ViewModels
                     
                     if (messageBodyElement) {{
                         let postId = article.getAttribute('data-content')?.replace('post-', '') || '';
+                        if (!postId) {{
+                            let lbEl = article.querySelector('[data-lb-id^=""post-""]');
+                            if (lbEl) postId = lbEl.getAttribute('data-lb-id').replace('post-', '');
+                        }}
+                        if (!postId) {{
+                            let posLink = article.querySelector('.MessageCard__post-position');
+                            if (posLink) postId = posLink.getAttribute('href')?.replace('#post-', '') || '';
+                        }}
                         messages.push({{
                             postId: postId,
                             username: userElement ? userElement.textContent.trim() : 'Unknown',
