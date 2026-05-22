@@ -625,6 +625,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
+            else if (uri.Host.Contains("hkpro") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "HK Pro";
+                MessagesPerPage = 50;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
             else if (uri.Host.Contains("handloadersbench") && GetType() != typeof(HandloadersBenchViewModel))
             {
                 SiteName = "Handloaders Bench";
