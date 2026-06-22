@@ -81,11 +81,17 @@ namespace AIToady.Harvester.ViewModels
                 }
                 else
                 {
-                    // It's a link URL, construct full URL and navigate
-                    string currentUrl = await InvokeExecuteScriptRequested("window.location.origin");
-                    currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
-                    string fullUrl = currentUrl + result;
-                    InvokeNavigateRequested(fullUrl);
+                    // It's a link URL, navigate to it
+                    if (result.StartsWith("http"))
+                    {
+                        InvokeNavigateRequested(result);
+                    }
+                    else
+                    {
+                        string currentUrl = await InvokeExecuteScriptRequested("window.location.origin");
+                        currentUrl = JsonSerializer.Deserialize<string>(currentUrl);
+                        InvokeNavigateRequested(currentUrl + result);
+                    }
                     return true;
                 }
             }

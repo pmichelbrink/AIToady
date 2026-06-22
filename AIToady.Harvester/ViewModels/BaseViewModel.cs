@@ -564,7 +564,7 @@ namespace AIToady.Harvester.ViewModels
                 _threadName = _threadName.Split('|')[0].Trim();
 
             // Extract thread ID from URL and append to thread name
-            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault();
+            var threadId = threadUrl.TrimEnd('/').Split('.').LastOrDefault()?.Split('/')[0].Split('?')[0].Split('#')[0];
             if (!string.IsNullOrEmpty(threadId))
                 _threadName += $"_{threadId}";
 
@@ -628,6 +628,13 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("hkpro") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "HK Pro";
+                MessagesPerPage = 50;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("rugerforum") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Ruger Forum";
                 MessagesPerPage = 50;
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
