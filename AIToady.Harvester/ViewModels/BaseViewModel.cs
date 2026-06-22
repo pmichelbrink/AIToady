@@ -21,7 +21,7 @@ namespace AIToady.Harvester.ViewModels
         protected string _attachmentElement = "";
         protected ObservableCollection<LogEntry> _logEntries = new ObservableCollection<LogEntry>();
         protected int _threadsToSkip = 0;
-        protected int _messagesPerPage = 50;
+        protected int _messagesPerPage = 20;
         protected string _url = string.Empty;
         protected string _nextElement = ".pageNav-jump--next";
         protected string _threadElement = "structItem-title";
@@ -628,14 +628,21 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("hkpro") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "HK Pro";
-                MessagesPerPage = 50;
+                MessagesPerPage = 20;
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
             else if (uri.Host.Contains("rugerforum") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Ruger Forum";
-                MessagesPerPage = 50;
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
+                return;
+            }
+            else if (uri.Host.Contains("survivalistboards") && GetType() != typeof(TheAKForumViewModel))
+            {
+                SiteName = "Survivalist Boards";
+                MessagesPerPage = 20;
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
