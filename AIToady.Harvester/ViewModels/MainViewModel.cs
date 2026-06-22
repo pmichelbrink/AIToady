@@ -115,6 +115,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Long Range Only";
                             MessagesPerPage = 50;
                         }
+                        else if (Url.Contains("northwestfirearms", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Northwest Firearms";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
