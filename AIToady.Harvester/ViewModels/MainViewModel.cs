@@ -120,6 +120,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Northwest Firearms";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("wessonforum", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Smith and Wesson Forum";
+                            MessagesPerPage = 30;
+                        }
                     }
                 }
 
@@ -198,9 +203,9 @@ namespace AIToady.Harvester.ViewModels
                         
                         // Extract all attachment files
                         let attachmentUrls = new Set();
-                        messageDiv.querySelectorAll('.attachmentList .attachment a, .attachmentList .file-preview').forEach(element => {{
+                        messageDiv.querySelectorAll('.attachmentList .attachment a, .attachmentList .file-preview, .file-preview[href]').forEach(element => {{
                             let attachmentUrl = element.href;
-                            if (attachmentUrl && attachmentUrl.includes('/attachments/')) {{
+                            if (attachmentUrl && (attachmentUrl.includes('/attachments/') || attachmentUrl.match(/\/a\/\d+/))) {{
                                 attachmentUrls.add(attachmentUrl);
                             }}
                         }});

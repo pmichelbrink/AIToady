@@ -559,6 +559,8 @@ namespace AIToady.Harvester.ViewModels
             string titleResult = await InvokeExecuteScriptRequested(titleScript);
             _threadName = JsonSerializer.Deserialize<string>(titleResult) ?? "Unknown Thread";
 
+            // Remove viewer count prefix like "(1) " or "(2) "
+            _threadName = System.Text.RegularExpressions.Regex.Replace(_threadName, @"^\(\d+\)\s*", "");
 
             if (_threadName.Contains('|'))
                 _threadName = _threadName.Split('|')[0].Trim();
