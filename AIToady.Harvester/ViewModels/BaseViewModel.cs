@@ -644,7 +644,7 @@ namespace AIToady.Harvester.ViewModels
             else if (uri.Host.Contains("survivalistboards") && GetType() != typeof(TheAKForumViewModel))
             {
                 SiteName = "Survivalist Boards";
-                MessagesPerPage = 20;
+                MessagesPerPage = 15;
                 ViewModelSwitchRequested?.Invoke(ViewModelType.TheAKForum);
                 return;
             }
