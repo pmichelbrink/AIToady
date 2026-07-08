@@ -78,6 +78,8 @@ namespace AIToady.Harvester.ViewModels
 
             if (_threadName.Contains(" - The Firing Line Forums"))
                 _threadName = _threadName.Split(" - The Firing Line Forums")[0].Trim();
+            else if (!string.IsNullOrEmpty(SiteName) && _threadName.Contains($" - {SiteName}"))
+                _threadName = _threadName.Split($" - {SiteName}")[0].Trim();
 
             // Extract thread ID from URL and append to thread name
             var threadId = threadUrl.Substring(threadUrl.LastIndexOf("t=") + 2);

@@ -715,6 +715,12 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.FiringLineViewModel);
                 return;
             }
+            else if (uri.Host.Contains("berettaforum") && GetType() != typeof(FiringLineViewModel))
+            {
+                MessagesPerPage = 10;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.FiringLineViewModel);
+                return;
+            }
             else if (uri.Host.Contains("m4carbine") && GetType() != typeof(M4CarbineViewModel))
             {
                 SiteName = "M4 Carbine";
@@ -768,6 +774,8 @@ namespace AIToady.Harvester.ViewModels
             else
             {
                 await ExtractForumName(skipCategoryPrompt);
+                if (uri.Host.Contains("berettaforum"))
+                    SiteName = "Beretta Forum";
             }
         }
         public async void ExecuteNext()
@@ -831,6 +839,9 @@ namespace AIToady.Harvester.ViewModels
         }
         public async Task LoadForumPage()
         {
+            if (SiteName == "Beretta Forum" && !Url.Contains("pp="))
+                Url += "&pp=50&sort=lastpost&order=desc&daysprune=-1";
+
             InvokeNavigateRequested(Url);
             string currentUrl;
             int retries = 0;
