@@ -286,6 +286,23 @@ namespace AIToady.Harvester.ViewModels
             if (!IsReadyToHarvest())
                 return;
 
+            try
+            {
+                await ExecuteStartHarvestingCore();
+            }
+            catch (Exception ex)
+            {
+                await AddLogEntry($"FATAL: ExecuteStartHarvesting crashed: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}", HarvesterStatus.Stuck);
+                _isHarvesting = false;
+                HarvestingButtonText = "Start Harvesting";
+            }
+        }
+
+        private async Task ExecuteStartHarvestingCore()
+        {
+            if (!_isHarvesting)
+                return;
+
             _harvesterName = $"{Environment.MachineName}-{SiteName}-{ForumName}";
             _client = new HubClient(_harvesterName);
 
