@@ -125,6 +125,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Smith and Wesson Forum";
                             MessagesPerPage = 30;
                         }
+                        else if (Url.Contains("thecmp", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "CMP Forum";
+                            MessagesPerPage = 30;
+                        }
                     }
                 }
 

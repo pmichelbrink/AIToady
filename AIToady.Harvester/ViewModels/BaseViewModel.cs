@@ -677,6 +677,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.CastBoolits);
                 return;
             }
+            else if (uri.Host.Contains("thecmp") && GetType() != typeof(CmpViewModel))
+            {
+                SiteName = "CMP Forum";
+                MessagesPerPage = 15;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.Cmp);
+                return;
+            }
             else if (uri.Host.Contains("accuratereloading") && GetType() != typeof(AccurateReloadingViewModel))
             {
                 SiteName = "Accurate Reloading";
@@ -930,7 +937,8 @@ namespace AIToady.Harvester.ViewModels
 
                     try
                     {
-                        string imageUrl = message.Images[i];
+                        string imageUrl = message.Images[i].Split('|')[0];
+                        string imageUrlWithHint = message.Images[i];
 
                         if (imageUrl.EndsWith(".php"))
                         {
@@ -1411,6 +1419,22 @@ namespace AIToady.Harvester.ViewModels
         }
         public async Task<string> GetFileNameFromUrl(int fileIndex, string attachmentUrl)
         {
+            // Extract filename hint encoded as url|filename (e.g. for CMP fetch URLs)
+            if (attachmentUrl.Contains('|'))
+            {
+                var hint = attachmentUrl.Split('|').Last();
+                if (hint.Contains('.'))
+                    return string.Join("_", hint.Split(Path.GetInvalidFileNameChars()));
+            }
+
+            // Handle CMP filedata/fetch URLs
+            if (attachmentUrl.Contains("filedata/fetch"))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(attachmentUrl, @"id=(\d+)");
+                if (match.Success)
+                    return $"cmp_{match.Groups[1].Value}.jpg";
+            }
+
             // Handle file.php?id= URLs
             if (attachmentUrl.Contains("file.php?id="))
             {

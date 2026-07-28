@@ -26,7 +26,8 @@ namespace AIToady.Harvester
         Campfire,
         HuntingLife,
         TexasHunting,
-        RimfireCentral
+        RimfireCentral,
+        Cmp
     }
 
     public partial class MainWindow : Window
@@ -805,6 +806,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<HandloadersBenchViewModel>();
             else if (viewModelType == ViewModelType.CastBoolits)
                 newViewModel = _viewModel.CloneToViewModel<CastBoolitsViewModel>();
+            else if (viewModelType == ViewModelType.Cmp)
+                newViewModel = _viewModel.CloneToViewModel<CmpViewModel>();
             else if (viewModelType == ViewModelType.M4Carbine)
                 newViewModel = _viewModel.CloneToViewModel<M4CarbineViewModel>();
             else if (viewModelType == ViewModelType.BrianEnos)
