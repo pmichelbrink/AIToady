@@ -684,6 +684,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.Cmp);
                 return;
             }
+            else if (uri.Host.Contains("winchester") && GetType() != typeof(WinchesterViewModel))
+            {
+                SiteName = "Winchester Collector";
+                MessagesPerPage = 20;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.Winchester);
+                return;
+            }
             else if (uri.Host.Contains("accuratereloading") && GetType() != typeof(AccurateReloadingViewModel))
             {
                 SiteName = "Accurate Reloading";
