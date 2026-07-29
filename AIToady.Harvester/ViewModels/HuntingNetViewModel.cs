@@ -168,29 +168,36 @@ namespace AIToady.Harvester.ViewModels
         }
         protected async override Task<string> GetThreadName(string threadUrl)
         {
-            string titleScript = @"
+            try
+            {
+                string titleScript = @"
                 (function() {
                     let h1 = document.querySelector('h1.threadtitle');
                     return h1 ? h1.textContent.trim() : '';
                 })()
             ";
 
-            string titleResult = await InvokeExecuteScriptRequested(titleScript);
-            if (!string.IsNullOrEmpty(titleResult))
-            {
-                titleResult = JsonSerializer.Deserialize<string>(titleResult);
+                string titleResult = await InvokeExecuteScriptRequested(titleScript);
+                if (!string.IsNullOrEmpty(titleResult))
+                    titleResult = JsonSerializer.Deserialize<string>(titleResult);
+
+                var urlParts = threadUrl.TrimEnd('/').Split('/');
+                var threadSegment = urlParts.FirstOrDefault(part => part.Contains('-') && part.Split('-')[0].All(char.IsDigit));
+                var threadId = threadSegment?.Substring(0, threadSegment.IndexOf('-'));
+
+                if (string.IsNullOrEmpty(titleResult))
+                    titleResult = threadSegment?.Replace('-', '_') ?? $"Unknown_Thread_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+                if (!string.IsNullOrEmpty(threadId))
+                    titleResult += $"_{threadId}";
+
+                return string.Join("_", titleResult.Split(System.IO.Path.GetInvalidFileNameChars()));
             }
-
-            if (string.IsNullOrEmpty(titleResult))
-                titleResult = "Unknown Thread";
-
-            var urlParts = threadUrl.TrimEnd('/').Split('/');
-            var threadSegment = urlParts.FirstOrDefault(part => part.Contains('-') && part.Split('-')[0].All(char.IsDigit));
-            var threadId = threadSegment.Substring(0, threadSegment.IndexOf('-'));
-            if (!string.IsNullOrEmpty(threadId))
-                titleResult += $"_{threadId}";
-
-            return string.Join("_", titleResult.Split(System.IO.Path.GetInvalidFileNameChars()));
+            catch
+            {
+                var segment = threadUrl.TrimEnd('/').Split('/').LastOrDefault() ?? $"Unknown_Thread_{DateTime.Now:yyyyMMdd_HHmmss}";
+                return string.Join("_", segment.Split(System.IO.Path.GetInvalidFileNameChars()));
+            }
         }
         protected async override Task<List<ForumMessage>> HarvestPage()
         {
