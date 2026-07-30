@@ -130,6 +130,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "CMP Forum";
                             MessagesPerPage = 30;
                         }
+                        else if (Url.Contains("indiana", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Indiana Gun Owners";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
