@@ -140,6 +140,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Maryland Shooters";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("nygun", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "NY Gun Forum";
+                            MessagesPerPage = 30;
+                        }
                     }
                 }
 
