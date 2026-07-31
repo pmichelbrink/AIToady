@@ -135,6 +135,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Indiana Gun Owners";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("mdshoot", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Maryland Shooters";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
