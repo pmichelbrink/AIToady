@@ -145,6 +145,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "NY Gun Forum";
                             MessagesPerPage = 30;
                         }
+                        else if (Url.Contains("gon.com", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Georgia Outdoor News";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
