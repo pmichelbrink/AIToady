@@ -165,6 +165,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Gulf Coast Gun Forum";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("carolinafirearms", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Carolina Firearms Forum";
+                            MessagesPerPage = 40;
+                        }
                     }
                 }
 

@@ -855,6 +855,10 @@ namespace AIToady.Harvester.ViewModels
                                     threadUrl = a.href;
                                 }}
                             }});
+                            if (!threadUrl) {{
+                                let primary = div.querySelector('a[data-tp-primary=""on""]');
+                                if (primary) threadUrl = primary.href;
+                            }}
                             if (threadUrl) {{
                                 let latestDate = null;
                                 let structItem = div.closest('.structItem');
