@@ -155,6 +155,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "The Armory Life";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("texasguntalk", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Texas Gun Talk";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
