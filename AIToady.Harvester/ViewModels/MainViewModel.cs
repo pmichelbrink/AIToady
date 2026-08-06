@@ -160,6 +160,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Texas Gun Talk";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("gulfcoast", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "Gulf Coast Gun Forum";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
