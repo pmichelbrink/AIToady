@@ -28,7 +28,8 @@ namespace AIToady.Harvester
         TexasHunting,
         RimfireCentral,
         Cmp,
-        Winchester
+        Winchester,
+        CalGuns
     }
 
     public partial class MainWindow : Window
@@ -809,6 +810,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<CastBoolitsViewModel>();
             else if (viewModelType == ViewModelType.Cmp)
                 newViewModel = _viewModel.CloneToViewModel<CmpViewModel>();
+            else if (viewModelType == ViewModelType.CalGuns)
+                newViewModel = _viewModel.CloneToViewModel<CalGunsViewModel>();
             else if (viewModelType == ViewModelType.Winchester)
                 newViewModel = _viewModel.CloneToViewModel<WinchesterViewModel>();
             else if (viewModelType == ViewModelType.M4Carbine)

@@ -691,6 +691,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.Cmp);
                 return;
             }
+            else if (uri.Host.Contains("calguns") && GetType() != typeof(CalGunsViewModel))
+            {
+                SiteName = "Cal Guns";
+                MessagesPerPage = 15;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.CalGuns);
+                return;
+            }
             else if (uri.Host.Contains("winchester") && GetType() != typeof(WinchesterViewModel))
             {
                 SiteName = "Winchester Collector";
