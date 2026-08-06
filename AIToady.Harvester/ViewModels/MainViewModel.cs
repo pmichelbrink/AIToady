@@ -150,6 +150,11 @@ namespace AIToady.Harvester.ViewModels
                             SiteName = "Georgia Outdoor News";
                             MessagesPerPage = 20;
                         }
+                        else if (Url.Contains("thearmorylife", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            SiteName = "The Armory Life";
+                            MessagesPerPage = 20;
+                        }
                     }
                 }
 
