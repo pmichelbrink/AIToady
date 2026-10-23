@@ -29,7 +29,8 @@ namespace AIToady.Harvester
         RimfireCentral,
         Cmp,
         Winchester,
-        CalGuns
+        CalGuns,
+        SassNet
     }
 
     public partial class MainWindow : Window
@@ -826,6 +827,8 @@ private void LoadWindowSettings()
                 newViewModel = _viewModel.CloneToViewModel<TexasHuntingViewModel>();
             else if (viewModelType == ViewModelType.HuntingLife)
                 newViewModel = _viewModel.CloneToViewModel<HuntingLifeViewModel>();
+            else if (viewModelType == ViewModelType.SassNet)
+                newViewModel = _viewModel.CloneToViewModel<SassNetViewModel>();
             else
                 newViewModel = _viewModel.CloneToViewModel<AR15ViewModel>();
             

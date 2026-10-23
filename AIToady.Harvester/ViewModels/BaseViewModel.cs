@@ -813,6 +813,13 @@ namespace AIToady.Harvester.ViewModels
                 ViewModelSwitchRequested?.Invoke(ViewModelType.HuntingLife);
                 return;
             }
+            else if (uri.Host.Contains("sassnet") && GetType() != typeof(SassNetViewModel))
+            {
+                SiteName = "SASS Wire";
+                MessagesPerPage = 25;
+                ViewModelSwitchRequested?.Invoke(ViewModelType.SassNet);
+                return;
+            }
                 
             NavigateRequested?.Invoke(url);
             await Task.Delay(2000);
