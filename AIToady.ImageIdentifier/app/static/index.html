@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIToady Image Identifier</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main>
+    <h1>AIToady Image Identifier</h1>
+    <p id="health" class="muted">Checking local model...</p>
+
+    <section id="step-first" class="card">
+      <h2>1. Choose an image</h2>
+      <label class="drop" id="drop-first">
+        <input type="file" id="file-first" accept="image/*" hidden>
+        <img id="preview-first" alt="" hidden>
+        <span id="hint-first">Click or drop an image here</span>
+      </label>
+      <button id="btn-identify" disabled>Identify</button>
+    </section>
+
+    <section id="step-reverse" class="card" hidden>
+      <h2>2. Other side of the coin</h2>
+      <p id="reverse-message" class="prompt"></p>
+      <label class="drop" id="drop-reverse">
+        <input type="file" id="file-reverse" accept="image/*" hidden>
+        <img id="preview-reverse" alt="" hidden>
+        <span id="hint-reverse">Click or drop the other side here</span>
+      </label>
+      <div class="row">
+        <button id="btn-reverse" disabled>Identify with both sides</button>
+        <button id="btn-skip" class="secondary">I only have one side</button>
+      </div>
+    </section>
+
+    <section id="busy" class="card" hidden>
+      <div class="spinner"></div>
+      <p>Analysing with the local model... <span id="timer">0</span>s</p>
+      <p class="muted">Large models favour accuracy over speed; this can take a few minutes.</p>
+    </section>
+
+    <p id="error" class="error" hidden></p>
+
+    <section id="result" class="card" hidden>
+      <h2 id="result-summary"></h2>
+      <p id="result-message" class="muted"></p>
+      <table id="result-table"></table>
+      <div id="result-extra"></div>
+      <h3>Links</h3>
+      <ul id="result-links"></ul>
+      <details>
+        <summary>Raw JSON</summary>
+        <pre id="result-raw"></pre>
+      </details>
+      <button id="btn-reset" class="secondary">Identify another image</button>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
