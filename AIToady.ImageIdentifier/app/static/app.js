@@ -74,8 +74,42 @@ function render(data) {
 
   const table = $("result-table");
   table.replaceChildren();
+  $("result-extra").replaceChildren();
   const coin = data.coin;
-  if (coin) {
+  const roman = data.roman_coin;
+  if (roman) {
+    addRow(table, "Ruler", roman.ruler);
+    addRow(table, "Reign", roman.ruler_reign);
+    addRow(table, "Catalogue reference", roman.catalog_reference);
+    addRow(table, "Denomination", roman.denomination);
+    addRow(table, "Metal", roman.metal);
+    addRow(table, "Mint", roman.mint);
+    addRow(table, "Mint mark", roman.mint_mark);
+    addRow(table, "Date", roman.date_range);
+    addRow(table, "Obverse legend", roman.obverse_legend);
+    addRow(table, "Obverse expanded", roman.obverse_legend_expanded);
+    addRow(table, "Obverse translation", roman.obverse_translation);
+    addRow(table, "Obverse design", roman.obverse_description);
+    addRow(table, "Reverse legend", roman.reverse_legend);
+    addRow(table, "Reverse expanded", roman.reverse_legend_expanded);
+    addRow(table, "Reverse translation", roman.reverse_translation);
+    addRow(table, "Reverse design", roman.reverse_description);
+    addRow(table, "Notes", roman.historical_notes);
+    addRow(table, "Confidence", roman.confidence);
+    addRow(table, "Uncertainties", roman.uncertainties);
+    renderCandidates(data);
+  } else if (data.roman_front) {
+    const s = data.roman_front;
+    addRow(table, "Side shown", s.side);
+    addRow(table, "Portrait", s.portrait_person);
+    addRow(table, "Legend as read", s.legend_fragments);
+    addRow(table, "Legend", s.legend_reconstructed);
+    addRow(table, "Expanded", s.legend_expanded);
+    addRow(table, "Translation", s.legend_translation);
+    addRow(table, "Design", s.design_description);
+    addRow(table, "Reverse type", s.reverse_type);
+    addRow(table, "Denomination", s.denomination);
+  } else if (coin) {
     addRow(table, "Coin", coin.name);
     addRow(table, "Person on obverse (heads)", coin.obverse_person);
     addRow(table, "Country / issuer", coin.country_or_issuer);
@@ -116,6 +150,37 @@ function render(data) {
     links.appendChild(li);
   }
   $("result-raw").textContent = JSON.stringify(data, null, 2);
+}
+
+function renderCandidates(data) {
+  const extra = $("result-extra");
+  if (data.catalog_note) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = data.catalog_note;
+    extra.appendChild(note);
+  }
+  if (!data.catalog_candidates || !data.catalog_candidates.length) return;
+  const heading = document.createElement("h3");
+  heading.textContent = "OCRE catalogue candidates";
+  extra.appendChild(heading);
+  const matchedId = data.roman_coin ? data.roman_coin.matched_catalog_id : "";
+  const list = document.createElement("ol");
+  for (const c of data.catalog_candidates) {
+    const li = document.createElement("li");
+    if (c.id === matchedId) li.className = "matched";
+    const a = document.createElement("a");
+    a.href = c.url;
+    a.textContent = c.label;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    li.appendChild(a);
+    const details = [c.denomination, c.mint, c.date_range].filter(Boolean).join(", ");
+    li.appendChild(document.createTextNode(
+      `${c.id === matchedId ? " (match)" : ""} ${details}: ${c.obverse_legend} / ${c.reverse_legend}. ${c.reverse_description}`));
+    list.appendChild(li);
+  }
+  extra.appendChild(list);
 }
 
 function handle(data) {

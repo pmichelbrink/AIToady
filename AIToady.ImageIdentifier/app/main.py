@@ -9,6 +9,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .catalog import OcreCatalog
 from .config import settings
 from .identifier import Identifier
 from .imaging import InvalidImageError
@@ -23,9 +24,15 @@ STATIC_DIR = Path(__file__).parent / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     llm = OllamaClient(settings.ollama_url, settings.model, settings.request_timeout, settings.num_ctx)
-    app.state.identifier = Identifier(llm, SessionStore(settings.session_ttl_seconds), settings)
+    catalog = (OcreCatalog(settings.catalog_cache_dir, settings.catalog_timeout,
+                           settings.catalog_cache_days)
+               if settings.catalog_enabled else None)
+    app.state.identifier = Identifier(llm, SessionStore(settings.session_ttl_seconds), settings,
+                                      catalog)
     yield
     await llm.close()
+    if catalog is not None:
+        await catalog.close()
 
 
 app = FastAPI(

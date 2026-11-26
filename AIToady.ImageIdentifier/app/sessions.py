@@ -4,9 +4,10 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 from .imaging import PreparedImage
-from .schemas import CoinSideAnalysis, GeneralAnalysis
+from .schemas import CoinSideAnalysis, GeneralAnalysis, RomanSideAnalysis
 
 
 class SessionNotFoundError(KeyError):
@@ -17,7 +18,8 @@ class SessionNotFoundError(KeyError):
 class CoinSession:
     front: PreparedImage
     general: GeneralAnalysis
-    front_side: CoinSideAnalysis
+    front_side: Optional[CoinSideAnalysis] = None  # generic coins
+    roman_front: Optional[RomanSideAnalysis] = None  # Roman Imperial coins
 
 
 class SessionStore:

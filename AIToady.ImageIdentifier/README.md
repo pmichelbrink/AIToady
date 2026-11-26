@@ -3,8 +3,10 @@
 Identifies the contents of an image with a local vision LLM running in [Ollama](https://ollama.com).
 Coins get special handling: after the first side, the app asks for the other side, then combines
 both sides into one identification that includes the person on the obverse (heads).
+**Roman Imperial coins** get a specialist path that reads the Latin legends and checks the
+result against the OCRE catalogue (Online Coins of the Roman Empire).
 
-Python + FastAPI + Pillow. The browser UI and the JSON API are served by the same process.
+Python + FastAPI + Pillow + OpenCV. The browser UI and the JSON API are served by the same process.
 
 ## Setup (Windows, once)
 
@@ -43,6 +45,11 @@ $env:VISION_MODEL = "qwen2.5vl:7b"; .\run.ps1 -Setup
 | `MAX_IMAGE_SIDE` / `MIN_IMAGE_SIDE` | `1536` / `768` | Images are resized into this range |
 | `MAX_UPLOAD_MB` | `25` | Upload limit |
 | `SESSION_TTL_SECONDS` | `1800` | How long a coin waits for its other side |
+| `CATALOG_ENABLED` | `true` | Look up Roman Imperial coins in OCRE (needs internet) |
+| `CATALOG_TIMEOUT_SECONDS` | `180` | Per-request timeout for nomisma.org |
+| `CATALOG_CANDIDATES` | `12` | How many OCRE types the model compares the coin with |
+| `CATALOG_CACHE_DAYS` | `30` | How long a ruler's downloaded types are reused |
+| `CATALOG_CACHE_DIR` | `cache/ocre` | Where downloaded types are stored |
 
 ## How identification works
 
@@ -52,9 +59,28 @@ $env:VISION_MODEL = "qwen2.5vl:7b"; .\run.ps1 -Setup
    contrast-enhanced, sharpened greyscale copy, and reasons about who is portrayed. The API
    then returns `needs_reverse`. When the other side arrives, it gets its own side pass, and a
    final pass combines both sides. If the first photo was the reverse, the app asks for the obverse.
+4. **Roman Imperial coins** take a specialist path instead of step 3:
+   - **Image views:** OpenCV finds the coin and crops to it. The app also makes a CLAHE-enhanced
+     greyscale copy that brings out worn relief, and a *rim strip*, where the outer band of the
+     coin is unwrapped with a polar transform so the circular legend reads as straight text.
+   - **Side pass:** For each side, the model gets those three views and a numismatist's checklist.
+     It records the legend letters it actually sees, then reconstructs, expands and translates the
+     legend. It also reads field and exergue mint marks, describes the design in catalogue style,
+     and names the emperor and the reverse type.
+   - **Catalogue lookup:** The app downloads every OCRE type for that ruler from the Nomisma.org
+     SPARQL endpoint and ranks them locally against the readings: obverse legend, reverse legend,
+     reverse design, denomination and mint. Ranking locally tolerates worn or partly misread
+     legends. Each ruler's types are cached on disk, so later lookups are instant.
+   - **Final pass:** The model compares both sides with the top-ranked catalogue types and picks
+     the one that matches, such as "RIC II Trajan 11", or says that none fits. The app only
+     accepts an id that was actually among the candidates.
+   - **Offline fallback:** If nomisma.org is unreachable, which happens, the app still returns the
+     model's identification and explains in `catalog_note` that the lookup failed.
 
-Links are search URLs (Google, Wikipedia, Numista, eBay sold listings) built from the result.
-The app never passes on URLs written by the model.
+Links are built from the result, never from URLs the model wrote. Roman coins get the OCRE
+match and candidates, an OCRE search, acsearch and CoinArchives auction archives, Wildwinds
+(through a Google site search), Google Images and Wikipedia. Other coins get Google, Wikipedia,
+Numista and eBay sold listings.
 
 ## API
 
@@ -79,8 +105,13 @@ curl.exe -F "image=@heads.jpg" http://localhost:8000/api/identify          # -> 
 curl.exe -F "image=@tails.jpg" http://localhost:8000/api/identify/<session_id>/reverse
 ```
 
-The key response fields are `status`, `summary`, `coin` (for coins: `name`, `obverse_person`,
-`country_or_issuer`, `denomination`, `year`, ...), `general`, `front_side`, `back_side` and `links`.
+The key response fields are `status`, `summary`, `general` and `links`. Coins also return:
+
+- **Other coins:** `coin` (`name`, `obverse_person`, `country_or_issuer`, `denomination`,
+  `year`, ...), `front_side` and `back_side`.
+- **Roman Imperial coins:** `roman_coin` (`ruler`, `catalog_reference`, `matched_catalog_id`,
+  legends with expansions and translations, `denomination`, `mint`, `date_range`, ...),
+  `roman_front`, `roman_back`, `catalog_candidates` and `catalog_note`.
 
 Sessions are held in memory, so restarting the server clears them. The API has no
 authentication, which is why it listens on localhost only by default.
